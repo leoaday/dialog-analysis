@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Claude 会话分析器</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.10.0/styles/github.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/marked@13.0.3/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.10.0/highlight.min.js"></script>
+  <style>
+    :root {
+      --bg: #f5f6f8;
+      --panel: #ffffff;
+      --border: #e3e6eb;
+      --text: #1f2328;
+      --muted: #6b7280;
+      --accent: #2f6feb;
+      --user-bubble: #dbeafe;
+      --user-border: #93c5fd;
+      --assistant-bubble: #ffffff;
+      --thinking-bg: #fff9e6;
+      --thinking-border: #f5c971;
+      --tool-bg: #f1f5f9;
+      --tool-border: #cbd5e1;
+      --tool-accent: #475569;
+      --result-bg: #0f172a;
+      --result-text: #e2e8f0;
+      --compact-bg: #fef3c7;
+      --compact-border: #f59e0b;
+      --error: #dc2626;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); }
+    body { display: flex; flex-direction: column; }
+    header {
+      padding: 12px 20px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+    header h1 { margin: 0; font-size: 16px; font-weight: 600; }
+    header .stats { color: var(--muted); font-size: 13px; }
+    header .actions { margin-left: auto; display: flex; gap: 12px; align-items: center; }
+    header label.toggle { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; cursor: pointer; }
+    header button { font: inherit; padding: 6px 12px; border: 1px solid var(--border); background: var(--panel); border-radius: 6px; cursor: pointer; }
+    header button:hover { border-color: var(--accent); color: var(--accent); }
+
+    main { flex: 1; overflow: auto; padding: 24px; }
+
+    /* Drop zone */
+    #drop {
+      max-width: 720px;
+      margin: 60px auto;
+      padding: 60px 32px;
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      background: var(--panel);
+      text-align: center;
+      transition: all 0.15s;
+    }
+    #drop.dragover { border-color: var(--accent); background: #eef4ff; }
+    #drop h2 { margin: 0 0 8px; font-size: 20px; font-weight: 600; }
+    #drop p { margin: 4px 0; color: var(--muted); }
+    #drop .hint { font-size: 12px; margin-top: 14px; }
+    #drop input[type=file] { display: none; }
+    #drop button { margin-top: 16px; padding: 8px 18px; font: inherit; background: var(--accent); color: white; border: 0; border-radius: 6px; cursor: pointer; }
+
+    /* Conversation */
+    #conversation { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+
+    .row { display: flex; flex-direction: column; }
+    .row.user { align-items: flex-end; }
+    .row.assistant { align-items: flex-start; }
+    .row .meta { font-size: 11px; color: var(--muted); margin: 0 6px 4px; }
+
+    .bubble {
+      max-width: 82%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--assistant-bubble);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+    .row.user .bubble { background: var(--user-bubble); border-color: var(--user-border); }
+    .bubble pre { background: #0f172a; color: #e2e8f0; padding: 10px 12px; border-radius: 6px; overflow-x: auto; font-size: 12.5px; line-height: 1.5; }
+    .bubble code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; }
+    .bubble :not(pre) > code { background: rgba(15,23,42,0.07); padding: 1px 4px; border-radius: 3px; }
+    .bubble p { margin: 8px 0; }
+    .bubble p:first-child { margin-top: 0; }
+    .bubble p:last-child { margin-bottom: 0; }
+    .bubble ul, .bubble ol { padding-left: 22px; margin: 8px 0; }
+    .bubble blockquote { border-left: 3px solid var(--border); padding: 0 12px; color: var(--muted); margin: 8px 0; }
+    .bubble table { border-collapse: collapse; margin: 8px 0; }
+    .bubble th, .bubble td { border: 1px solid var(--border); padding: 4px 8px; }
+    .bubble h1, .bubble h2, .bubble h3, .bubble h4 { margin: 14px 0 6px; }
+
+    /* Thinking */
+    .thinking {
+      max-width: 82%;
+      background: var(--thinking-bg);
+      border: 1px solid var(--thinking-border);
+      border-radius: 12px;
+      padding: 0;
+      overflow: hidden;
+    }
+    .thinking summary {
+      padding: 10px 14px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      color: #92560a;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+    }
+    .thinking summary::-webkit-details-marker { display: none; }
+    .thinking summary::before { content: "▶"; font-size: 10px; transition: transform 0.15s; color: #b8770f; }
+    .thinking[open] summary::before { transform: rotate(90deg); }
+    .thinking .body { padding: 4px 16px 14px; font-size: 13.5px; line-height: 1.65; color: #573805; }
+    .thinking .body p { margin: 6px 0; }
+    .thinking .body code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .thinking .body pre { background: #fff5d1; color: #573805; padding: 8px 10px; border-radius: 4px; border: 1px solid #f0d896; }
+
+    /* Tool */
+    .tool {
+      max-width: 82%;
+      background: var(--tool-bg);
+      border: 1px solid var(--tool-border);
+      border-radius: 10px;
+      overflow: hidden;
+      font-size: 13px;
+    }
+    .tool .head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #e2e8f0;
+      border-bottom: 1px solid var(--tool-border);
+      color: var(--tool-accent);
+      font-weight: 600;
+    }
+    .tool .head .icon { font-size: 14px; }
+    .tool .head .name { color: #0f172a; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .tool .head .id { margin-left: auto; font-size: 10.5px; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 400; }
+    .tool .section-title { padding: 6px 12px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+    .tool pre.params {
+      margin: 6px 12px;
+      padding: 10px 12px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .tool .result-wrapper {
+      margin: 6px 12px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--result-bg);
+    }
+    .tool .result-wrapper.error { border-color: var(--error); }
+    .tool .result-wrapper > details > summary {
+      padding: 6px 10px;
+      background: #1e293b;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 11.5px;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+    }
+    .tool .result-wrapper > details > summary::-webkit-details-marker { display: none; }
+    .tool .result-wrapper > details > summary::before { content: "▶"; font-size: 9px; transition: transform 0.15s; }
+    .tool .result-wrapper > details[open] > summary::before { transform: rotate(90deg); }
+    .tool .result-wrapper.error > details > summary { background: #7f1d1d; color: #fecaca; }
+    .tool pre.result {
+      margin: 0;
+      padding: 10px 12px;
+      background: var(--result-bg);
+      color: var(--result-text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 480px;
+      overflow-y: auto;
+    }
+    .tool .no-result {
+      margin: 0 12px 12px;
+      padding: 8px 12px;
+      background: #fef3c7;
+      border: 1px dashed #f59e0b;
+      border-radius: 6px;
+      color: #92560a;
+      font-size: 12px;
+    }
+    .tool .result-img { display: block; max-width: 100%; max-height: 400px; margin: 6px 0; }
+
+    /* Compact boundary */
+    .compact {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 16px 0;
+      color: #92560a;
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+    .compact::before, .compact::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--compact-border);
+    }
+    .compact .badge {
+      padding: 4px 12px;
+      border: 1px solid var(--compact-border);
+      background: var(--compact-bg);
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    /* System / sidechain note */
+    .system-note {
+      align-self: center;
+      max-width: 90%;
+      padding: 8px 12px;
+      background: #f3f4f6;
+      border: 1px dashed var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .empty-state {
+      max-width: 720px;
+      margin: 100px auto;
+      text-align: center;
+      color: var(--muted);
+    }
+    .error-line { color: var(--error); font-size: 12px; }
+
+    /* Sidechain marker */
+    .row.sidechain .bubble,
+    .row.sidechain .tool,
+    .row.sidechain .thinking { border-style: dashed; opacity: 0.92; }
+    .row.sidechain::before {
+      content: "subagent";
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #7c3aed;
+      margin: 0 6px 2px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Claude 会话分析器</h1>
+    <span id="stats" class="stats"></span>
+    <div class="actions">
+      <label class="toggle"><input type="checkbox" id="show-sidechain" checked /> 显示子代理</label>
+      <label class="toggle"><input type="checkbox" id="show-system" /> 显示系统通知</label>
+      <button id="reset" hidden>重新加载</button>
+    </div>
+  </header>
+  <main>
+    <div id="drop">
+      <h2>拖入 Claude 会话 JSONL 文件</h2>
+      <p>支持 <code>~/.claude/projects/.../*.jsonl</code> 格式</p>
+      <p class="hint">文件全部在浏览器本地解析，不会上传任何数据</p>
+      <button id="pick">选择文件</button>
+      <input type="file" id="file" accept=".jsonl,.json,.log" />
+    </div>
+    <div id="conversation"></div>
+  </main>
+
+  <script>
+    const drop = document.getElementById('drop');
+    const fileInput = document.getElementById('file');
+    const pickBtn = document.getElementById('pick');
+    const conversation = document.getElementById('conversation');
+    const statsEl = document.getElementById('stats');
+    const resetBtn = document.getElementById('reset');
+    const showSidechainCb = document.getElementById('show-sidechain');
+    const showSystemCb = document.getElementById('show-system');
+
+    if (window.marked) {
+      marked.setOptions({
+        gfm: true,
+        breaks: true,
+        highlight(code, lang) {
+          if (window.hljs) {
+            try {
+              if (lang && hljs.getLanguage(lang)) return hljs.highlight(code, { language: lang }).value;
+              return hljs.highlightAuto(code).value;
+            } catch (_) {}
+          }
+          return code;
+        }
+      });
+    }
+
+    function md(text) {
+      if (typeof text !== 'string') text = String(text ?? '');
+      const html = window.marked ? marked.parse(text) : text.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+      return window.DOMPurify ? DOMPurify.sanitize(html) : html;
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function formatJson(v) {
+      try { return JSON.stringify(v, null, 2); } catch (_) { return String(v); }
+    }
+
+    function fmtTimestamp(ts) {
+      if (!ts) return '';
+      try {
+        const d = new Date(ts);
+        return d.toLocaleString();
+      } catch (_) { return ts; }
+    }
+
+    let parsedEvents = [];      // ordered list of conversation events to render
+    let resultIndex = new Map(); // tool_use_id -> { content, is_error }
+
+    pickBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', e => {
+      if (e.target.files.length) loadFile(e.target.files[0]);
+    });
+    drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
+    drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
+    drop.addEventListener('drop', e => {
+      e.preventDefault();
+      drop.classList.remove('dragover');
+      if (e.dataTransfer.files.length) loadFile(e.dataTransfer.files[0]);
+    });
+    resetBtn.addEventListener('click', () => {
+      drop.style.display = '';
+      conversation.innerHTML = '';
+      statsEl.textContent = '';
+      resetBtn.hidden = true;
+      fileInput.value = '';
+      parsedEvents = [];
+      resultIndex = new Map();
+    });
+    showSidechainCb.addEventListener('change', render);
+    showSystemCb.addEventListener('change', render);
+
+    async function loadFile(file) {
+      try {
+        const text = await file.text();
+        const stats = parse(text);
+        drop.style.display = 'none';
+        resetBtn.hidden = false;
+        statsEl.textContent = `${file.name} · ${stats.lines} 行 · ${stats.userMsgs} 用户 · ${stats.assistantMsgs} 助手 · ${stats.toolUses} 工具调用 · ${stats.thinking} 思考 · ${stats.compactions} 压缩`;
+        render();
+      } catch (err) {
+        conversation.innerHTML = `<div class="empty-state error-line">解析失败：${escapeHtml(err.message)}</div>`;
+        console.error(err);
+      }
+    }
+
+    function parse(text) {
+      parsedEvents = [];
+      resultIndex = new Map();
+      let lines = 0, userMsgs = 0, assistantMsgs = 0, toolUses = 0, thinking = 0, compactions = 0;
+      const rawLines = text.split(/\r?\n/);
+
+      // First pass: gather tool_results to look up by tool_use_id
+      for (const line of rawLines) {
+        if (!line.trim()) continue;
+        let obj;
+        try { obj = JSON.parse(line); } catch (_) { continue; }
+        if (obj.type === 'user') {
+          const content = obj.message && obj.message.content;
+          if (Array.isArray(content)) {
+            for (const c of content) {
+              if (c && c.type === 'tool_result' && c.tool_use_id) {
+                resultIndex.set(c.tool_use_id, {
+                  content: c.content,
+                  isError: !!c.is_error,
+                  timestamp: obj.timestamp,
+                });
+              }
+            }
+          }
+        }
+      }
+
+      // Second pass: build event list in order
+      for (const line of rawLines) {
+        if (!line.trim()) continue;
+        lines++;
+        let obj;
+        try { obj = JSON.parse(line); } catch (_) { continue; }
+
+        if (obj.type === 'system' && obj.subtype === 'compact_boundary') {
+          compactions++;
+          parsedEvents.push({
+            kind: 'compact',
+            timestamp: obj.timestamp,
+            preTokens: obj.compactMetadata?.preTokens,
+            trigger: obj.compactMetadata?.trigger,
+          });
+          continue;
+        }
+
+        if (obj.type === 'user') {
+          const msg = obj.message || {};
+          const content = msg.content;
+          const isSidechain = !!obj.isSidechain;
+          const isCompactSummary = !!obj.isCompactSummary;
+          if (typeof content === 'string') {
+            // Task notifications, etc.
+            parsedEvents.push({
+              kind: 'system-note',
+              text: content,
+              timestamp: obj.timestamp,
+              sidechain: isSidechain,
+              compactSummary: isCompactSummary,
+            });
+          } else if (Array.isArray(content)) {
+            const userTexts = [];
+            for (const c of content) {
+              if (!c || typeof c !== 'object') continue;
+              if (c.type === 'text') userTexts.push(c.text || '');
+              // tool_result already indexed; do not push as standalone event
+            }
+            if (userTexts.length) {
+              userMsgs++;
+              parsedEvents.push({
+                kind: 'user',
+                texts: userTexts,
+                timestamp: obj.timestamp,
+                sidechain: isSidechain,
+                compactSummary: isCompactSummary,
+              });
+            }
+          }
+          continue;
+        }
+
+        if (obj.type === 'assistant') {
+          const msg = obj.message || {};
+          const content = msg.content;
+          const isSidechain = !!obj.isSidechain;
+          if (Array.isArray(content)) {
+            assistantMsgs++;
+            for (const c of content) {
+              if (!c || typeof c !== 'object') continue;
+              if (c.type === 'text') {
+                parsedEvents.push({
+                  kind: 'assistant-text',
+                  text: c.text || '',
+                  timestamp: obj.timestamp,
+                  sidechain: isSidechain,
+                  model: msg.model,
+                });
+              } else if (c.type === 'thinking') {
+                thinking++;
+                parsedEvents.push({
+                  kind: 'thinking',
+                  text: c.thinking || '',
+                  timestamp: obj.timestamp,
+                  sidechain: isSidechain,
+                });
+              } else if (c.type === 'tool_use') {
+                toolUses++;
+                parsedEvents.push({
+                  kind: 'tool',
+                  id: c.id,
+                  name: c.name,
+                  input: c.input,
+                  timestamp: obj.timestamp,
+                  sidechain: isSidechain,
+                });
+              }
+            }
+          }
+          continue;
+        }
+      }
+      return { lines, userMsgs, assistantMsgs, toolUses, thinking, compactions };
+    }
+
+    function render() {
+      const showSidechain = showSidechainCb.checked;
+      const showSystem = showSystemCb.checked;
+      conversation.innerHTML = '';
+      const frag = document.createDocumentFragment();
+      for (const ev of parsedEvents) {
+        if (ev.sidechain && !showSidechain) continue;
+        if (ev.kind === 'system-note' && !showSystem) continue;
+        if (ev.compactSummary && !showSystem) continue;
+        const node = renderEvent(ev);
+        if (node) frag.appendChild(node);
+      }
+      conversation.appendChild(frag);
+    }
+
+    function renderEvent(ev) {
+      switch (ev.kind) {
+        case 'compact': return renderCompact(ev);
+        case 'user': return renderUser(ev);
+        case 'assistant-text': return renderAssistantText(ev);
+        case 'thinking': return renderThinking(ev);
+        case 'tool': return renderTool(ev);
+        case 'system-note': return renderSystemNote(ev);
+      }
+      return null;
+    }
+
+    function rowEl(role, ev, metaExtra) {
+      const row = document.createElement('div');
+      row.className = `row ${role}` + (ev?.sidechain ? ' sidechain' : '');
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      const parts = [];
+      if (role === 'user') parts.push('用户');
+      else if (role === 'assistant') parts.push('助手');
+      if (metaExtra) parts.push(metaExtra);
+      if (ev?.timestamp) parts.push(fmtTimestamp(ev.timestamp));
+      meta.textContent = parts.join(' · ');
+      row.appendChild(meta);
+      return row;
+    }
+
+    function renderUser(ev) {
+      const row = rowEl('user', ev);
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.innerHTML = ev.texts.map(t => md(t)).join('<hr/>');
+      row.appendChild(bubble);
+      return row;
+    }
+
+    function renderAssistantText(ev) {
+      const row = rowEl('assistant', ev, ev.model);
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.innerHTML = md(ev.text);
+      row.appendChild(bubble);
+      return row;
+    }
+
+    function renderThinking(ev) {
+      const row = rowEl('assistant', ev, '思考');
+      const wrap = document.createElement('details');
+      wrap.className = 'thinking';
+      const sum = document.createElement('summary');
+      sum.textContent = '💭 思考过程';
+      const body = document.createElement('div');
+      body.className = 'body';
+      body.innerHTML = md(ev.text);
+      wrap.appendChild(sum);
+      wrap.appendChild(body);
+      row.appendChild(wrap);
+      return row;
+    }
+
+    function renderTool(ev) {
+      const row = rowEl('assistant', ev, '工具调用');
+      const tool = document.createElement('div');
+      tool.className = 'tool';
+
+      const head = document.createElement('div');
+      head.className = 'head';
+      head.innerHTML = `<span class="icon">🛠</span><span class="name">${escapeHtml(ev.name || 'Tool')}</span><span class="id">${escapeHtml(ev.id || '')}</span>`;
+      tool.appendChild(head);
+
+      // Params
+      const paramsTitle = document.createElement('div');
+      paramsTitle.className = 'section-title';
+      paramsTitle.textContent = '参数';
+      tool.appendChild(paramsTitle);
+      const params = document.createElement('pre');
+      params.className = 'params';
+      params.textContent = formatJson(ev.input ?? {});
+      tool.appendChild(params);
+
+      // Result lookup
+      const resTitle = document.createElement('div');
+      resTitle.className = 'section-title';
+      resTitle.textContent = '输出';
+      tool.appendChild(resTitle);
+
+      const result = ev.id ? resultIndex.get(ev.id) : null;
+      if (result == null) {
+        const noRes = document.createElement('div');
+        noRes.className = 'no-result';
+        noRes.textContent = '（未找到匹配的工具输出）';
+        tool.appendChild(noRes);
+      } else {
+        tool.appendChild(renderResult(result));
+      }
+
+      row.appendChild(tool);
+      return row;
+    }
+
+    function renderResult(result) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'result-wrapper' + (result.isError ? ' error' : '');
+      const det = document.createElement('details');
+      det.open = true;
+      const sum = document.createElement('summary');
+      const len = resultLength(result.content);
+      sum.textContent = (result.isError ? '⚠️ 工具错误输出' : '📤 工具输出') + (len ? ` · ${len.toLocaleString()} 字符` : '');
+      det.appendChild(sum);
+
+      const body = document.createElement('div');
+      if (typeof result.content === 'string') {
+        const pre = document.createElement('pre');
+        pre.className = 'result';
+        pre.textContent = result.content;
+        body.appendChild(pre);
+      } else if (Array.isArray(result.content)) {
+        for (const item of result.content) {
+          if (!item || typeof item !== 'object') continue;
+          if (item.type === 'text' && typeof item.text === 'string') {
+            const pre = document.createElement('pre');
+            pre.className = 'result';
+            pre.textContent = item.text;
+            body.appendChild(pre);
+          } else if (item.type === 'image' && item.source) {
+            const img = document.createElement('img');
+            img.className = 'result-img';
+            const data = item.source.data;
+            const mime = item.source.media_type || 'image/png';
+            img.src = item.source.type === 'base64' ? `data:${mime};base64,${data}` : (item.source.url || '');
+            img.alt = '工具返回图片';
+            body.appendChild(img);
+          } else {
+            const pre = document.createElement('pre');
+            pre.className = 'result';
+            pre.textContent = formatJson(item);
+            body.appendChild(pre);
+          }
+        }
+      } else {
+        const pre = document.createElement('pre');
+        pre.className = 'result';
+        pre.textContent = formatJson(result.content);
+        body.appendChild(pre);
+      }
+      det.appendChild(body);
+      wrapper.appendChild(det);
+      return wrapper;
+    }
+
+    function resultLength(content) {
+      if (typeof content === 'string') return content.length;
+      if (Array.isArray(content)) {
+        let n = 0;
+        for (const item of content) {
+          if (item && item.type === 'text' && typeof item.text === 'string') n += item.text.length;
+        }
+        return n;
+      }
+      return 0;
+    }
+
+    function renderCompact(ev) {
+      const div = document.createElement('div');
+      div.className = 'compact';
+      const badge = document.createElement('span');
+      badge.className = 'badge';
+      const tokens = ev.preTokens ? ` · ${ev.preTokens.toLocaleString()} tokens` : '';
+      const trigger = ev.trigger ? ` (${ev.trigger})` : '';
+      badge.textContent = `↕ 上下文压缩${trigger}${tokens} · ${fmtTimestamp(ev.timestamp)}`;
+      div.appendChild(badge);
+      return div;
+    }
+
+    function renderSystemNote(ev) {
+      const div = document.createElement('div');
+      div.className = 'system-note';
+      const tag = ev.compactSummary ? '【压缩摘要】' : '【系统通知】';
+      div.textContent = tag + (ev.timestamp ? ` ${fmtTimestamp(ev.timestamp)}\n` : '\n') + (ev.text || '');
+      return div;
+    }
+  </script>
+</body>
+</html>
