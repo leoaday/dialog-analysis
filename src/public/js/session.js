@@ -5,7 +5,7 @@ import { renderThinking } from "./renderers/thinking.js";
 import { renderTool } from "./renderers/tool.js";
 import { renderCompact } from "./renderers/compact.js";
 import { renderSystemNote } from "./renderers/system-note.js";
-import { bindFoldToggles } from "./fold-toggles.js";
+import { bindChips } from "./filter-chips.js";
 import { highlightAll } from "./highlight-q.js";
 
 const params = new URL(location.href).searchParams;
@@ -82,7 +82,8 @@ async function main() {
   const html = body.events.map((ev) => renderEvent(ev, toolResults)).join("");
   $conv.innerHTML = html;
   $stats.textContent = `${body.events.length} 条事件`;
-  bindFoldToggles($conv);
+  const $filterRow = document.getElementById("filter-row");
+  bindChips($conv, $filterRow);
   if (q) highlightAll($conv, q);
 }
 
