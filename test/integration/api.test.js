@@ -76,3 +76,26 @@ test("GET /api/subagent returns events", async () => {
   const body = await r.json();
   assert.equal(body.events.length, 2);
 });
+
+test("search hits in session body", async () => {
+  const r = await fetch(`${base}/api/search?dir=${encodeURIComponent(SESSIONS_DIR)}&q=second%20session%20start`);
+  assert.equal(r.status, 200);
+  const body = await r.json();
+  const s = body.sessions.find((x) => x.sessionId === "s2");
+  assert.ok(s.hitInSession);
+  assert.ok(s.sessionMatches.length >= 1);
+});
+
+test("search hits in subagent surfaces parent session with subagent-only flag", async () => {
+  const r = await fetch(`${base}/api/search?dir=${encodeURIComponent(SESSIONS_DIR)}&q=sidechain%20prompt%20for%20y`);
+  const body = await r.json();
+  const s = body.sessions.find((x) => x.sessionId === "s2");
+  assert.equal(s.hitInSession, false);
+  assert.equal(s.hitInSubagent, true);
+  assert.equal(s.subagentMatches[0].agentId, "y");
+});
+
+test("invalid regex returns 400", async () => {
+  const r = await fetch(`${base}/api/search?dir=${encodeURIComponent(SESSIONS_DIR)}&q=(&regex=1`);
+  assert.equal(r.status, 400);
+});
