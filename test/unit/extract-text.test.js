@@ -40,3 +40,10 @@ test("ignores usage and uuid", () => {
   assert.ok(!t.includes("999"));
   assert.ok(!t.includes("should-not-match"));
 });
+
+test("task-notification user content is extracted", () => {
+  const ev = { type: "user", message: { role: "user", content: "<task-notification>\n<task-id>abc</task-id>\n<summary>done</summary>\n</task-notification>" } };
+  const t = extractText(ev);
+  assert.ok(t.includes("done"));
+  assert.ok(t.includes("task-notification"));
+});
