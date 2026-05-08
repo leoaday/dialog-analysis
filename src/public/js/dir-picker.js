@@ -1,12 +1,14 @@
 import { api } from "./api.js";
 
+function escapeHtml(s) { return (s || "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+
 export function showDirPicker(initialPath) {
   return new Promise((resolve) => {
     const back = document.createElement("div");
     back.className = "modal-backdrop";
     back.innerHTML = `<div class="modal">
       <h3>选择目录</h3>
-      <input id="m-path" type="text" value="${initialPath || ""}" />
+      <input id="m-path" type="text" value="${escapeHtml(initialPath || "")}" />
       <div class="picker-list" id="m-list"></div>
       <div class="actions">
         <button id="m-cancel">取消</button>
@@ -29,7 +31,7 @@ export function showDirPicker(initialPath) {
         for (const e of body.entries) {
           if (e.type === "dir" || e.type === "jsonl-dir") {
             const tag = e.type === "jsonl-dir" ? `<span class="badge">${e.sessionCount} 会话</span>` : "";
-            const item = mkItem(`📁 ${e.name}`, "dir", `${p}/${e.name}`.replace(/\/+/g, "/"), tag);
+            const item = mkItem(`📁 ${escapeHtml(e.name)}`, "dir", `${p}/${e.name}`.replace(/\/+/g, "/"), tag);
             $list.appendChild(item);
           }
         }
