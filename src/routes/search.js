@@ -34,7 +34,7 @@ export async function search(req, res, url) {
       try { r = await searchFile(s.file, { q, regex, max: PER_FILE_MAX }); }
       catch (e) { return send(res, 400, { error: e.message }); }
       if (r.matches.length) {
-        subagentMatches.push({ agentId: s.agentId, file: s.file, count: r.matches.length, snippets: r.matches });
+        subagentMatches.push({ agentId: s.agentId, file: s.file, count: r.matches.length, snippets: r.matches, truncated: r.truncated });
       }
     }
     if (sessionRes.matches.length === 0 && subagentMatches.length === 0) continue;
@@ -49,6 +49,7 @@ export async function search(req, res, url) {
       hitInSession: sessionRes.matches.length > 0,
       hitInSubagent: subagentMatches.length > 0,
       sessionMatches: sessionRes.matches,
+      truncated: sessionRes.truncated || subagentMatches.some((m) => m.truncated),
       subagentMatches,
       rounds: meta.rounds,
       tokens: meta.tokens,

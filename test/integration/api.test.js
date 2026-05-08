@@ -99,3 +99,25 @@ test("invalid regex returns 400", async () => {
   const r = await fetch(`${base}/api/search?dir=${encodeURIComponent(SESSIONS_DIR)}&q=(&regex=1`);
   assert.equal(r.status, 400);
 });
+
+test("search reports per-file truncated flag when matches exceed cap", async () => {
+  // synthesize a file with > 50 matches inline
+  const { writeFileSync, mkdtempSync, rmSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const dir = mkdtempSync(join(tmpdir(), "da-trunc-"));
+  const file = join(dir, "many.jsonl");
+  // 60 user lines each containing the literal "needle"
+  const lines = Array.from({ length: 60 }, (_, i) =>
+    JSON.stringify({ type: "user", message: { role: "user", content: [{ type: "text", text: `needle ${i}` }] }, uuid: `u${i}` })
+  );
+  writeFileSync(file, lines.join("\n") + "\n");
+  try {
+    const r = await fetch(`${base}/api/search?dir=${encodeURIComponent(dir)}&q=needle`);
+    assert.equal(r.status, 200);
+    const body = await r.json();
+    const s = body.sessions[0];
+    assert.equal(s.sessionMatches.length, 50);
+    assert.equal(s.truncated, true);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
