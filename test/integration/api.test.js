@@ -27,3 +27,12 @@ test("rejects relative path", async () => {
   const r = await fetch(`${base}/api/list-dir?path=foo`);
   assert.equal(r.status, 400);
 });
+
+test("list-dir marks Claude project subdirs", async () => {
+  const r = await fetch(`${base}/api/list-dir?path=${encodeURIComponent(FIXTURES)}`);
+  const body = await r.json();
+  const sub = body.entries.find((e) => e.name === "multi-session-dir");
+  assert.equal(sub.type, "jsonl-dir");
+  assert.equal(sub.isClaudeProject, true);
+  assert.ok(typeof sub.sessionCount === "number" && sub.sessionCount >= 2);
+});
