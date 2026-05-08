@@ -121,13 +121,20 @@ document.getElementById("pick").addEventListener("click", async () => {
   if (p) goto(p);
 });
 
-document.getElementById("pick-native").addEventListener("click", async () => {
-  if (!window.showDirectoryPicker) { alert("仅 Chrome/Edge 支持"); return; }
-  try {
-    const handle = await window.showDirectoryPicker();
-    alert(`已选择目录: ${handle.name}\n请在弹层中输入完整绝对路径以继续。`);
-  } catch {}
-});
+const pickNative = document.getElementById("pick-native");
+if (!window.showDirectoryPicker) {
+  pickNative.disabled = true;
+  pickNative.title = "仅 Chrome/Edge 支持";
+} else {
+  pickNative.addEventListener("click", async () => {
+    try {
+      const handle = await window.showDirectoryPicker();
+      const guess = (currentDir ? currentDir.replace(/\/[^/]+$/, "") : "/Users") + "/" + handle.name;
+      const confirmed = await showDirPicker(guess);
+      if (confirmed) goto(confirmed);
+    } catch { /* user cancelled */ }
+  });
+}
 
 document.getElementById("refresh").addEventListener("click", () => loadList(currentDir));
 
