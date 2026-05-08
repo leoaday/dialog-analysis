@@ -8,6 +8,12 @@ import { getCachedMetadata } from "../parser/metadata-cache.js";
 
 const PER_FILE_MAX = 50;
 
+function buildSearchEtag(out, q, regex) {
+  let maxMtime = "";
+  for (const e of out) if (e.mtime > maxMtime) maxMtime = e.mtime;
+  return `W/"${out.length}-${maxMtime}-${encodeURIComponent(q)}-${regex ? 1 : 0}"`;
+}
+
 export async function search(req, res, url) {
   const dirRaw = url.searchParams.get("dir");
   const q = url.searchParams.get("q") || "";
@@ -62,5 +68,10 @@ export async function search(req, res, url) {
     if (a.hitInSession !== b.hitInSession) return a.hitInSession ? -1 : 1;
     return a.mtime < b.mtime ? 1 : -1;
   });
-  send(res, 200, { dir, q, regex, total: out.length, sessions: out });
+  const etag = buildSearchEtag(out, q, regex);
+  if (req.headers["if-none-match"] === etag) {
+    res.writeHead(304, { ETag: etag });
+    return res.end();
+  }
+  send(res, 200, { dir, q, regex, total: out.length, sessions: out }, { ETag: etag });
 }

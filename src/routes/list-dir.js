@@ -3,6 +3,12 @@ import { join, dirname } from "node:path";
 import { validateAbsolutePath } from "../path-validate.js";
 import { send } from "../server.js";
 
+function buildEtag(entries) {
+  let maxMtime = "";
+  for (const e of entries) if (e.mtime > maxMtime) maxMtime = e.mtime;
+  return `W/"${entries.length}-${maxMtime}"`;
+}
+
 async function classifyDir(absDir) {
   let entries;
   try { entries = await readdir(absDir); } catch { return { isClaudeProject: false, sessionCount: 0 }; }
@@ -37,5 +43,10 @@ export async function listDir(req, res, url) {
     }
     out.push(entry);
   }
-  send(res, 200, { path: p, parent: dirname(p) === p ? null : dirname(p), entries: out });
+  const etag = buildEtag(out);
+  if (req.headers["if-none-match"] === etag) {
+    res.writeHead(304, { ETag: etag });
+    return res.end();
+  }
+  send(res, 200, { path: p, parent: dirname(p) === p ? null : dirname(p), entries: out }, { ETag: etag });
 }

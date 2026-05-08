@@ -130,3 +130,27 @@ test("vendor static files are served", async () => {
     assert.ok(text.length > 1000, `vendor/${f} should be non-trivial`);
   }
 });
+
+test("/api/list-dir returns ETag and honors If-None-Match", async () => {
+  const r1 = await fetch(`${base}/api/list-dir?path=${encodeURIComponent(FIXTURES)}`);
+  const etag = r1.headers.get("ETag");
+  assert.match(etag || "", /W\/".+"/);
+  const r2 = await fetch(`${base}/api/list-dir?path=${encodeURIComponent(FIXTURES)}`, { headers: { "If-None-Match": etag } });
+  assert.equal(r2.status, 304);
+});
+
+test("/api/sessions returns ETag and honors If-None-Match", async () => {
+  const r1 = await fetch(`${base}/api/sessions?dir=${encodeURIComponent(SESSIONS_DIR)}`);
+  const etag = r1.headers.get("ETag");
+  assert.match(etag || "", /W\/".+"/);
+  const r2 = await fetch(`${base}/api/sessions?dir=${encodeURIComponent(SESSIONS_DIR)}`, { headers: { "If-None-Match": etag } });
+  assert.equal(r2.status, 304);
+});
+
+test("/api/search returns ETag and honors If-None-Match", async () => {
+  const r1 = await fetch(`${base}/api/search?dir=${encodeURIComponent(SESSIONS_DIR)}&q=second%20session%20start`);
+  const etag = r1.headers.get("ETag");
+  assert.match(etag || "", /W\/".+"/);
+  const r2 = await fetch(`${base}/api/search?dir=${encodeURIComponent(SESSIONS_DIR)}&q=second%20session%20start`, { headers: { "If-None-Match": etag } });
+  assert.equal(r2.status, 304);
+});

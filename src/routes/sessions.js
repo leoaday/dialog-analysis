@@ -5,6 +5,14 @@ import { send } from "../server.js";
 import { listSubagents } from "../parser/subagent-index.js";
 import { getCachedMetadata } from "../parser/metadata-cache.js";
 
+function buildDirEtag(entries) {
+  let maxMtime = "";
+  for (const e of entries) {
+    if (e.mtime && e.mtime > maxMtime) maxMtime = e.mtime;
+  }
+  return `W/"${entries.length}-${maxMtime}"`;
+}
+
 async function summarize(dir, name) {
   const file = join(dir, name);
   const { meta, stat: st } = await getCachedMetadata(file);
@@ -38,5 +46,10 @@ export async function sessions(req, res, url) {
     catch (e) { /* skip unreadable */ }
   }
   out.sort((a, b) => (a.mtime < b.mtime ? 1 : -1));
-  send(res, 200, { dir, sessions: out });
+  const etag = buildDirEtag(out);
+  if (req.headers["if-none-match"] === etag) {
+    res.writeHead(304, { ETag: etag });
+    return res.end();
+  }
+  send(res, 200, { dir, sessions: out }, { ETag: etag });
 }
