@@ -4,12 +4,15 @@ import { join, dirname } from "node:path";
 import { readFile } from "node:fs/promises";
 import { listDir } from "./routes/list-dir.js";
 import { sessions } from "./routes/sessions.js";
+import { session } from "./routes/session.js";
 
 const PUBLIC_DIR = join(dirname(fileURLToPath(import.meta.url)), "public");
 
 const ROUTES = new Map([
   ["/api/list-dir", listDir],
   ["/api/sessions", sessions],
+  ["/api/session", session],
+  ["/api/subagent", session],
 ]);
 
 const STATIC_TYPES = {

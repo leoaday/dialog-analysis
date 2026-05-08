@@ -51,3 +51,28 @@ test("GET /api/sessions returns metadata + subagents", async () => {
   assert.equal(s2.subagents[0].agentId, "y");
   assert.equal(s2.subagents[0].agentType, "reviewer");
 });
+
+test("GET /api/session returns events array + ETag", async () => {
+  const file = resolve("test/fixtures/basic.jsonl");
+  const r = await fetch(`${base}/api/session?file=${encodeURIComponent(file)}`);
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get("ETag") || "", /W\/".+"/);
+  const body = await r.json();
+  assert.equal(body.events.length, 9);
+});
+
+test("GET /api/session honors If-None-Match -> 304", async () => {
+  const file = resolve("test/fixtures/basic.jsonl");
+  const r1 = await fetch(`${base}/api/session?file=${encodeURIComponent(file)}`);
+  const etag = r1.headers.get("ETag");
+  const r2 = await fetch(`${base}/api/session?file=${encodeURIComponent(file)}`, { headers: { "If-None-Match": etag } });
+  assert.equal(r2.status, 304);
+});
+
+test("GET /api/subagent returns events", async () => {
+  const file = resolve("test/fixtures/with-subagents/parent/subagents/agent-x.jsonl");
+  const r = await fetch(`${base}/api/subagent?file=${encodeURIComponent(file)}`);
+  assert.equal(r.status, 200);
+  const body = await r.json();
+  assert.equal(body.events.length, 2);
+});
