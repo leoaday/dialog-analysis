@@ -1,24 +1,13 @@
-import { readdir, stat } from "node:fs/promises";
-import { join, basename } from "node:path";
+import { readdir } from "node:fs/promises";
+import { join } from "node:path";
 import { validateAbsolutePath } from "../path-validate.js";
 import { send } from "../server.js";
-import { computeMetadata } from "../parser/metadata.js";
 import { listSubagents } from "../parser/subagent-index.js";
-import { LRU } from "../lru.js";
-
-const cache = new LRU(50);
-
-function cacheKey(file, mtime, size) { return `${file}|${mtime}|${size}`; }
+import { getCachedMetadata } from "../parser/metadata-cache.js";
 
 async function summarize(dir, name) {
   const file = join(dir, name);
-  const st = await stat(file);
-  const key = cacheKey(file, st.mtimeMs, st.size);
-  let meta = cache.get(key);
-  if (!meta) {
-    meta = await computeMetadata(file);
-    cache.set(key, meta);
-  }
+  const { meta, stat: st } = await getCachedMetadata(file);
   const sessionId = name.endsWith(".jsonl") ? name.slice(0, -".jsonl".length) : name;
   const subagents = await listSubagents(dir, sessionId);
   return {

@@ -1,10 +1,10 @@
-import { readdir, stat } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { validateAbsolutePath } from "../path-validate.js";
 import { send } from "../server.js";
 import { searchFile } from "../parser/search.js";
 import { listSubagents } from "../parser/subagent-index.js";
-import { computeMetadata } from "../parser/metadata.js";
+import { getCachedMetadata } from "../parser/metadata-cache.js";
 
 const PER_FILE_MAX = 50;
 
@@ -38,9 +38,9 @@ export async function search(req, res, url) {
       }
     }
     if (sessionRes.matches.length === 0 && subagentMatches.length === 0) continue;
-    let st;
-    try { st = await stat(file); } catch { continue; }
-    const meta = await computeMetadata(file);
+    let metaResult;
+    try { metaResult = await getCachedMetadata(file); } catch { continue; }
+    const { meta, stat: st } = metaResult;
     out.push({
       sessionId,
       file,
