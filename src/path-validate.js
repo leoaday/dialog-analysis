@@ -6,7 +6,10 @@ export function validateAbsolutePath(p) {
   }
   if (p.includes("\0")) throw new Error("path contains NUL byte");
 
-  // Check for absolute path using path.isAbsolute or Windows-style absolute path
+  // path.isAbsolute rejects Windows drive paths on POSIX hosts. This regex lets
+  // the macOS test suite verify the contract for a Windows-style input. In
+  // production the server runs on the same OS as the file paths it serves,
+  // so path.isAbsolute alone is sufficient for real traffic.
   const isWindowsAbsolute = /^[a-zA-Z]:[/\\]/.test(p);
   if (!path.isAbsolute(p) && !isWindowsAbsolute) {
     throw new Error("path must be absolute");

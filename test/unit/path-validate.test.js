@@ -19,7 +19,7 @@ test("rejects NUL byte", () => {
 });
 
 test("rejects empty", () => {
-  assert.throws(() => validateAbsolutePath(""), /absolute/);
+  assert.throws(() => validateAbsolutePath(""), /non-empty/);
 });
 
 test("normalizes doubled separators", () => {
