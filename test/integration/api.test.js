@@ -121,3 +121,12 @@ test("search reports per-file truncated flag when matches exceed cap", async () 
     assert.equal(s.truncated, true);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+
+test("vendor static files are served", async () => {
+  for (const f of ["marked.min.js", "purify.min.js", "highlight.min.js", "github.min.css"]) {
+    const r = await fetch(`${base}/vendor/${f}`);
+    assert.equal(r.status, 200, `vendor/${f} should serve`);
+    const text = await r.text();
+    assert.ok(text.length > 1000, `vendor/${f} should be non-trivial`);
+  }
+});
