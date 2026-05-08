@@ -15,6 +15,7 @@ import { renderCompact } from "./renderers/compact.js";
 import { renderSystemNote } from "./renderers/system-note.js";
 import { bindChips } from "./filter-chips.js";
 import { highlightAll } from "./highlight-q.js";
+import { buildTimeline, renderTimelineColumn } from "./timeline.js";
 
 const REJECTION_PREFIXES = ["User rejected", "The user doesn't want to proceed with this tool use", "[Request interrupted by user"];
 function isToolRejection(toolResult) {
@@ -95,6 +96,25 @@ function dispatchToolUse(toolUse, toolResult) {
   return renderTool(toolUse, toolResult, "tool");
 }
 
+function quickClassify(ev) {
+  if (!ev || typeof ev !== "object") return "unknown";
+  if (ev.type === "user") {
+    if (typeof ev.message?.content === "string" && ev.message.content.startsWith("<task-notification>")) return "subagent";
+    return "user";
+  }
+  if (ev.type === "assistant") {
+    const arr = Array.isArray(ev.message?.content) ? ev.message.content : [];
+    const tu = arr.find((p) => p.type === "tool_use");
+    if (!tu) return "assistant";
+    const n = tu.name || "";
+    if (n === "Edit" || n === "MultiEdit" || n === "Write") return "tool";
+    if (n === "Read") return "tool";
+    if (n === "Agent" || n === "Task") return "subagent";
+    return "tool";
+  }
+  return "system";
+}
+
 function renderSubagentNotification(ev) {
   const body = ev.message?.content || "";
   const escape = (s) => (s || "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
@@ -131,6 +151,11 @@ async function main() {
   catch (e) { $banner.textContent = `加载失败：${e.message}`; $banner.style.display = "block"; return; }
   if (body.malformed) { $banner.textContent = `已忽略 ${body.malformed} 行无法解析的内容`; $banner.style.display = "block"; }
   attachCompactSummaries(body.events);
+  // Tag events with their classified kind for timeline coloring (best effort, no server roundtrip)
+  for (const ev of body.events) ev._kind = quickClassify(ev);
+  const timeline = buildTimeline(body.events);
+  const $timeline = document.getElementById("timeline");
+  $timeline.innerHTML = renderTimelineColumn(timeline);
   const toolResults = buildToolResultIndex(body.events);
   const html = body.events.map((ev) => renderEvent(ev, toolResults)).join("");
   $conv.innerHTML = html;
