@@ -49,11 +49,13 @@ function renderEdit(toolUse) {
 
 function renderMultiEdit(toolUse) {
   const { file_path = "", edits = [] } = toolUse.input || {};
-  const totalAdds = edits.reduce((n, e) => n + lineCount(e.new_string), 0);
-  const totalDels = edits.reduce((n, e) => n + lineCount(e.old_string), 0);
   const idAttr = toolUse.id ? ` title="${escapeHtml(toolUse.id)}"` : "";
+  let totalAdds = 0;
+  let totalDels = 0;
   const sections = edits.map((e, i) => {
     const ops = diffLines(e.old_string, e.new_string);
+    totalAdds += ops.filter((o) => o.type === "add").length;
+    totalDels += ops.filter((o) => o.type === "del").length;
     return `<div class="multi-edit-item"><div class="multi-edit-head">编辑 ${i + 1}</div><div class="diff-body">${renderDiff(ops)}</div></div>`;
   }).join("");
   return `<div class="tool tool-edit" data-kind="tool_edit">
