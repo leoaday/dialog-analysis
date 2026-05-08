@@ -7,5 +7,5 @@ export function renderUser(ev) {
   else if (Array.isArray(c)) {
     html = c.map((p) => p.type === "text" ? md(p.text || "") : "").join("");
   }
-  return `<div class="row user" data-kind="user_text"><div class="meta">user</div><div class="bubble">${html}</div></div>`;
+  return `<div class="row user" data-kind="user"><div class="meta">user</div><div class="bubble">${html}</div></div>`;
 }
