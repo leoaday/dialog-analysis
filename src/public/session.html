@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>Claude 会话详情</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <!-- ONLINE (default): faster initial parse via CDN. -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.10.0/styles/github.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/marked@13.0.3/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.10.0/highlight.min.js"></script>
+
+  <!-- OFFLINE: comment out the four lines above and uncomment the four below.
+  <link rel="stylesheet" href="/vendor/github.min.css" />
+  <script src="/vendor/marked.min.js"></script>
+  <script src="/vendor/purify.min.js"></script>
+  <script src="/vendor/highlight.min.js"></script>
+  -->
+</head>
+<body>
+  <header class="toolbar">
+    <a href="/" id="back">← 会话列表</a>
+    <h1 id="title" style="margin:0;font-size:14px;font-weight:600;"></h1>
+    <div class="stats" id="stats"></div>
+    <div class="actions" style="margin-left:auto;display:flex;gap:10px;">
+      <label class="toggle"><input type="checkbox" data-fold="thinking"> 思考</label>
+      <label class="toggle"><input type="checkbox" data-fold="tool"> 工具</label>
+      <label class="toggle"><input type="checkbox" data-fold="system"> 系统</label>
+      <label class="toggle"><input type="checkbox" data-fold="subagent"> subagent</label>
+      <label class="toggle"><input type="checkbox" data-fold="askUserQuestion"> 提问</label>
+    </div>
+  </header>
+  <main>
+    <div id="banner" style="display:none;"></div>
+    <div id="conversation"></div>
+  </main>
+  <script type="module" src="/js/session.js"></script>
+</body>
+</html>

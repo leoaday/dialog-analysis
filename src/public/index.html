@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>Claude 会话列表</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="toolbar">
+    <span style="font-weight:600;">Claude 会话分析器</span>
+    <nav class="breadcrumb" id="breadcrumb"></nav>
+    <button id="pick">选目录</button>
+    <button id="pick-native" title="浏览器原生目录选择器">浏览器选目录</button>
+    <button id="refresh">刷新</button>
+    <div class="search">
+      <input id="q" type="text" placeholder="全文检索" />
+      <label class="toggle"><input type="checkbox" id="regex"> 正则</label>
+      <button id="search">搜索</button>
+      <button id="clear" hidden>清空</button>
+    </div>
+  </header>
+  <main>
+    <div id="banner" style="display:none;padding:10px 20px;color:var(--muted);"></div>
+    <div id="list-container"></div>
+  </main>
+  <script type="module" src="/js/list.js"></script>
+</body>
+</html>
