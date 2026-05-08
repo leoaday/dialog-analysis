@@ -37,7 +37,7 @@ try {
   else if (requestedPort !== null) port = requestedPort;
   else port = await probeFreePort(defaultRange());
 } catch (e) {
-  process.stderr.write(`failed to find port: ${e.message}\n`);
+  process.stderr.write(`failed to find port: ${e.message}\nUse -p <port> to specify an explicit port.\n`);
   process.exit(1);
 }
 

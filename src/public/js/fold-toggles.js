@@ -30,5 +30,9 @@ export function bindFoldToggles(root) {
     });
   }
   applyFold(root, state);
+  root.addEventListener("click", (e) => {
+    const target = e.target.closest("[data-kind].collapsed");
+    if (target) target.classList.remove("collapsed");
+  });
   return state;
 }

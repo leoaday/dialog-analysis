@@ -1,5 +1,5 @@
 import { readdir, readFile } from "node:fs/promises";
-import { join, basename } from "node:path";
+import { join } from "node:path";
 import { streamJsonl } from "./jsonl-stream.js";
 import { extractText } from "./extract-text.js";
 

@@ -10,6 +10,27 @@ const $container = document.getElementById("list-container");
 
 function escapeHtml(s) { return (s || "").replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])); }
 
+function highlightSnippet(snippet, ranges) {
+  if (!ranges || ranges.length === 0) return escapeHtml(snippet);
+  let out = "";
+  let cursor = 0;
+  const sorted = [...ranges].sort((a, b) => a[0] - b[0]);
+  for (const [s, e] of sorted) {
+    if (s < cursor) continue;  // overlap guard
+    out += escapeHtml(snippet.slice(cursor, s));
+    out += `<mark>${escapeHtml(snippet.slice(s, e))}</mark>`;
+    cursor = e;
+  }
+  out += escapeHtml(snippet.slice(cursor));
+  return out;
+}
+
+function renderSnippets(matches) {
+  if (!matches || matches.length === 0) return "";
+  const items = matches.slice(0, 2).map((m) => `<div class="snippet">${highlightSnippet(m.snippet, m.matchRanges)}</div>`).join("");
+  return `<div class="snippets">${items}</div>`;
+}
+
 function renderBreadcrumb(p) {
   if (!p) { $crumb.innerHTML = `<span style="color:var(--muted);">未选择目录</span>`; return; }
   const parts = p.split("/").filter(Boolean);
@@ -46,7 +67,7 @@ function sessionRow(s, opts) {
     <td>${fmtMtime(s.mtime)}</td>
     <td>${s.rounds}</td>
     <td>${fmtTokens(s.tokens)}</td>
-    <td class="summary-cell">${escapeHtml(s.firstUserSummary)}${note}</td>
+    <td class="summary-cell">${escapeHtml(s.firstUserSummary)}${note}${opts.search ? renderSnippets(s.sessionMatches) : ""}</td>
     <td>${subBtn}</td>
     <td><a href="${detailHref}">查看</a></td>
   </tr>${renderSubRow(s, opts)}`;
