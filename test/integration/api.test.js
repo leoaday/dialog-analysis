@@ -36,3 +36,18 @@ test("list-dir marks Claude project subdirs", async () => {
   assert.equal(sub.isClaudeProject, true);
   assert.ok(typeof sub.sessionCount === "number" && sub.sessionCount >= 2);
 });
+
+const SESSIONS_DIR = resolve("test/fixtures/multi-session-dir");
+
+test("GET /api/sessions returns metadata + subagents", async () => {
+  const r = await fetch(`${base}/api/sessions?dir=${encodeURIComponent(SESSIONS_DIR)}`);
+  assert.equal(r.status, 200);
+  const body = await r.json();
+  assert.equal(body.dir, SESSIONS_DIR);
+  assert.equal(body.sessions.length, 2);
+  const s2 = body.sessions.find((s) => s.sessionId === "s2");
+  assert.ok(s2.firstUserSummary.includes("second session start"));
+  assert.equal(s2.subagentCount, 1);
+  assert.equal(s2.subagents[0].agentId, "y");
+  assert.equal(s2.subagents[0].agentType, "reviewer");
+});

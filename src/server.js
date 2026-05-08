@@ -3,11 +3,13 @@ import { URL, fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
 import { readFile } from "node:fs/promises";
 import { listDir } from "./routes/list-dir.js";
+import { sessions } from "./routes/sessions.js";
 
 const PUBLIC_DIR = join(dirname(fileURLToPath(import.meta.url)), "public");
 
 const ROUTES = new Map([
   ["/api/list-dir", listDir],
+  ["/api/sessions", sessions],
 ]);
 
 const STATIC_TYPES = {
