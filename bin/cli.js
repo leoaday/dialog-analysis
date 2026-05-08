@@ -7,6 +7,7 @@ import { homedir } from "node:os";
 import { startServer } from "../src/server.js";
 import { probeFreePort, defaultRange } from "../src/port-probe.js";
 import { openInBrowser } from "../src/browser-open.js";
+import { log } from "../src/log.js";
 
 const pkgPath = join(dirname(fileURLToPath(import.meta.url)), "..", "package.json");
 const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
@@ -45,8 +46,9 @@ const server = await startServer({ port });
 const url = `http://127.0.0.1:${server.port}`;
 const startUrl = `${url}/?dir=${encodeURIComponent(dir)}`;
 process.stdout.write(`listening: ${url}\n`);
+log.info("starting", { dir, port: server.port });
 if (!argv["no-open"]) openInBrowser(startUrl);
 
-const shutdown = async () => { await server.close(); process.exit(0); };
+const shutdown = async () => { log.info("shutdown signal"); await server.close(); process.exit(0); };
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);

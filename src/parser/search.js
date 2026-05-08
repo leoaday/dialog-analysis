@@ -1,6 +1,7 @@
 import { streamJsonl } from "./jsonl-stream.js";
 import { extractText } from "./extract-text.js";
 import { classifyEvent } from "./events.js";
+import { log } from "../log.js";
 
 const CTX = 60;
 
@@ -58,5 +59,6 @@ export async function searchFile(filePath, { q, regex = false, max = 50 }) {
     }
     if (truncated) break;
   }
+  log.trace("searched", { filePath, matches: matches.length, truncated });
   return { matches, truncated };
 }
