@@ -26,9 +26,7 @@ function pieces(content) {
 
 export function extractText(ev) {
   if (!ev || typeof ev !== "object") return "";
-  if (ev.type === "system") {
-    return ev.subtype === "compact_boundary" ? "" : "";
-  }
+  if (ev.type === "system") return "";
   if (ev.type === "user" && ev.isCompactSummary) {
     const c = ev.message?.content;
     if (typeof c === "string") return c;
