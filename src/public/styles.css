@@ -298,3 +298,7 @@ mark { background:#fef08a; padding:0 2px; border-radius:2px; }
 .session-table .snippets { margin-top:6px; display:flex; flex-direction:column; gap:4px; font-size:11.5px; color:var(--muted); }
 .session-table .snippet { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; line-height:1.5; }
 .session-table .snippet mark { background:#fef08a; padding:0 1px; }
+
+/* Subagent detail page accent */
+body.kind-subagent header.toolbar { background: #f5f3ff; border-bottom-color: #c4b5fd; }
+body.kind-subagent header.toolbar h1::before { content: "subagent · "; color: #7c3aed; font-weight: 600; }
