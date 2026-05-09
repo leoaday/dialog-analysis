@@ -61,12 +61,16 @@ function classifyToolUse(toolUse) {
 export function classifyEvent(ev) {
   if (!ev || typeof ev !== "object") return "unknown";
 
-  if (ev.type === "system") return "system";
+  if (ev.type === "system") {
+    if (ev.subtype === "compact_boundary") return "compact";
+    return "system";
+  }
   if (ev.type === "queue-operation") return "system";
+  if (ev.type === "last-prompt") return "system";
 
   if (ev.type === "user") {
     if (isTaskNotification(ev)) return "subagent";
-    if (ev.isCompactSummary) return "system";
+    if (ev.isCompactSummary) return "compact";
     if (ev.isMeta) return "system";
     const arr = contentArr(ev);
     if (arr.length && arr.every((p) => p.type === "tool_result")) return "tool_result";
