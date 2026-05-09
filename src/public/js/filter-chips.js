@@ -1,36 +1,47 @@
-const KEY = "da:filter:v2";  // localStorage key compatible with v2 (additive only)
-
-const ORDER = ["open", "folded", "hidden"];
+const KEY = "da:filter:v2";  // localStorage key carries from v2.1 with auto-migration
 
 const KINDS = [
   "user", "assistant", "thinking", "tool", "tool_edit", "tool_read",
   "tool_todowrite", "subagent", "ask", "tool_rejection", "compact", "system", "unknown",
 ];
 
-const DEFAULTS = {
-  user: "open",
-  assistant: "open",
-  thinking: "open",
-  tool: "folded",
-  tool_edit: "folded",
-  tool_read: "folded",
-  tool_todowrite: "folded",
-  subagent: "folded",
-  ask: "open",
-  tool_rejection: "open",
-  compact: "folded",
-  system: "hidden",
-  unknown: "hidden",
+const DEFAULTS_RICH = {
+  user: { visible: true, expanded: true },
+  assistant: { visible: true, expanded: true },
+  thinking: { visible: true, expanded: true },
+  tool: { visible: true, expanded: false },
+  tool_edit: { visible: true, expanded: false },
+  tool_read: { visible: true, expanded: false },
+  tool_todowrite: { visible: true, expanded: false },
+  subagent: { visible: true, expanded: false },
+  ask: { visible: true, expanded: true },
+  tool_rejection: { visible: true, expanded: true },
+  compact: { visible: true, expanded: false },
+  system: { visible: false, expanded: false },
+  unknown: { visible: false, expanded: false },
 };
 
 function attrName(kind) { return kind.replace(/_/g, "-"); }
-function nextState(s) { return ORDER[(ORDER.indexOf(s) + 1) % ORDER.length]; }
 
 export function loadFilterState() {
   try {
     const stored = JSON.parse(localStorage.getItem(KEY) || "{}");
-    return { ...DEFAULTS, ...stored };
-  } catch { return { ...DEFAULTS }; }
+    const out = {};
+    for (const k of KINDS) {
+      const v = stored[k];
+      if (v && typeof v === "object" && "visible" in v) {
+        out[k] = { ...DEFAULTS_RICH[k], ...v };
+      } else if (typeof v === "string") {
+        // migrate v2.1 string state ("open"/"folded"/"hidden") → v2.2 object
+        out[k] = { visible: v !== "hidden", expanded: v === "open" };
+      } else {
+        out[k] = { ...DEFAULTS_RICH[k] };
+      }
+    }
+    return out;
+  } catch {
+    return Object.fromEntries(KINDS.map((k) => [k, { ...DEFAULTS_RICH[k] }]));
+  }
 }
 
 export function saveFilterState(s) { localStorage.setItem(KEY, JSON.stringify(s)); }
@@ -45,62 +56,80 @@ function injectFilterStyles() {
   document.head.appendChild(styleEl);
 }
 
-function setBodyShow(kind, value) {
-  document.body.setAttribute(`data-show-${attrName(kind)}`, value !== "hidden" ? "true" : "false");
+function setBodyShow(kind, visible) {
+  document.body.setAttribute(`data-show-${attrName(kind)}`, visible ? "true" : "false");
 }
 
 function batchSetDetails(root, kind, open) {
-  // Set every <details> within blocks of this kind, plus <details> blocks that ARE this kind.
   const sel = `[data-kind="${kind}"] details, details[data-kind="${kind}"]`;
   const els = root.querySelectorAll(sel);
   for (const d of els) d.open = open;
 }
 
-function renderChip(kind, value) {
-  const cls = `chip chip-${value}`;
-  const symbol = value === "folded" ? "⊟" : value === "hidden" ? "" : "";
-  return `<button class="${cls}" data-kind="${kind}" data-value="${value}" title="${value}">${kind}${symbol ? ` <span class="chip-icon">${symbol}</span>` : ""}</button>`;
+function renderChip(kind, st) {
+  const cls = `chip ${st.visible ? "chip-visible" : "chip-hidden"}`;
+  const checked = st.expanded ? "checked" : "";
+  return `<div class="${cls}" data-kind="${kind}" role="button" tabindex="0" aria-pressed="${st.visible}">
+    <span class="chip-label">${kind}</span>
+    <input type="checkbox" class="chip-fold" tabindex="0" ${checked} aria-label="expand ${kind}" />
+  </div>`;
 }
 
 export function renderFilterRow(state) {
-  return KINDS.map((k) => renderChip(k, state[k] || "open")).join("");
+  return KINDS.map((k) => renderChip(k, state[k])).join("");
 }
 
-function updateChipDOM(container, kind, value) {
-  const btn = container.querySelector(`.chip[data-kind="${kind}"]`);
-  if (!btn) return;
-  btn.className = `chip chip-${value}`;
-  btn.dataset.value = value;
-  btn.title = value;
-  // re-render label so the ⊟ icon swap is correct without rebuilding the whole row
-  const symbol = value === "folded" ? "⊟" : "";
-  btn.innerHTML = `${kind}${symbol ? ` <span class="chip-icon">${symbol}</span>` : ""}`;
+function updateChipDOM(container, kind, st) {
+  const chip = container.querySelector(`.chip[data-kind="${kind}"]`);
+  if (!chip) return;
+  chip.className = `chip ${st.visible ? "chip-visible" : "chip-hidden"}`;
+  chip.setAttribute("aria-pressed", String(st.visible));
+  const cb = chip.querySelector(".chip-fold");
+  if (cb) cb.checked = st.expanded;
 }
 
-export function bindChips(root, container) {
+export function bindChips(root, container, hooks = {}) {
   injectFilterStyles();
   const state = loadFilterState();
   container.innerHTML = renderFilterRow(state);
-  // Initialize body data-show-* and details state once.
   for (const k of KINDS) {
-    setBodyShow(k, state[k] || "open");
-    if (state[k] !== "hidden") batchSetDetails(root, k, state[k] === "open");
+    setBodyShow(k, state[k].visible);
+    if (state[k].visible) batchSetDetails(root, k, state[k].expanded);
   }
 
   container.addEventListener("click", (e) => {
-    const btn = e.target.closest(".chip[data-kind]");
-    if (!btn) return;
-    const kind = btn.dataset.kind;
-    const v = nextState(state[kind] || "open");
-    state[kind] = v;
+    const cb = e.target.closest(".chip-fold");
+    const chip = e.target.closest(".chip[data-kind]");
+    if (!chip) return;
+    const kind = chip.dataset.kind;
+    const before = hooks.beforeMutate?.();
+    if (cb) {
+      // checkbox click — toggle expanded only; checkbox already toggled by browser
+      e.stopPropagation();
+      state[kind].expanded = cb.checked;
+    } else {
+      // chip body click — toggle visible
+      state[kind].visible = !state[kind].visible;
+    }
     saveFilterState(state);
-    updateChipDOM(container, kind, v);
-    setBodyShow(kind, v);
-    if (v !== "hidden") batchSetDetails(root, kind, v === "open");
+    updateChipDOM(container, kind, state[kind]);
+    setBodyShow(kind, state[kind].visible);
+    if (state[kind].visible) batchSetDetails(root, kind, state[kind].expanded);
+    hooks.afterMutate?.(before);
+  });
+
+  // keyboard: Space/Enter on chip body toggles visible
+  container.addEventListener("keydown", (e) => {
+    if (e.key !== " " && e.key !== "Enter") return;
+    const cb = e.target.closest(".chip-fold");
+    const chip = e.target.closest(".chip[data-kind]");
+    if (!chip || cb) return;  // checkbox keyboard handled natively
+    e.preventDefault();
+    chip.click();
   });
 
   return state;
 }
 
-// Back-compat exports — kept for any external import (currently none).
+// Back-compat exports
 export function applyFilter(_root, _state) { /* no-op: handled per-chip and via CSS */ }

@@ -308,15 +308,18 @@ body.kind-subagent header.toolbar h1::before { content: "subagent · "; color: #
 header.toolbar { padding: 10px 16px; gap: 14px; }
 .filter-row { background: #fafbfc; border-bottom: 1px solid var(--border); padding: 8px 16px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 12px; }
 .filter-label { color: var(--muted); margin-right: 6px; }
-.chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border: 1px solid var(--border); border-radius: 14px; cursor: pointer; user-select: none; background: #fff; font: 12px/1.2 -apple-system, sans-serif; color: var(--text); }
-.chip-open { background: #eef4ff; color: var(--accent); border-color: var(--accent); }
-.chip-folded { background: #eef4ff; color: var(--accent); border-color: var(--accent); }
-.chip-folded .chip-icon { color: #9ca3af; font-size: 10px; }
+/* v2.2 chip: visible/hidden + embedded expanded checkbox */
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px 3px 10px; border: 1px solid var(--border); border-radius: 14px; cursor: pointer; user-select: none; background: #fff; font: 12px/1.2 -apple-system, sans-serif; color: var(--text); outline: none; }
+.chip:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+.chip-visible { background: #eef4ff; color: var(--accent); border-color: var(--accent); }
 .chip-hidden { background: #f3f4f6; color: #9ca3af; text-decoration: line-through; border-color: #e3e6eb; }
+.chip-hidden .chip-fold { visibility: hidden; }
+.chip-fold { margin: 0; cursor: pointer; accent-color: var(--accent); width: 12px; height: 12px; }
+.chip-label { pointer-events: none; }   /* clicks pass through to chip body */
 
 
 /* Tool head: name + path/summary + tool-id at right */
-.tool { background: var(--tool-bg); border: 1px solid var(--tool-border); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+.tool { background: transparent; border: none; padding: 0; font-size: 13px; }
 .tool-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .tool-name { font-weight: 600; color: var(--text); }
 .tool-id { margin-left: auto; color: #9ca3af; font-size: 11px; cursor: help; font-family: ui-monospace, Menlo, monospace; }
@@ -365,7 +368,7 @@ header.toolbar { padding: 10px 16px; gap: 14px; }
 .web-meta div { margin: 4px 0; font-size: 12px; }
 
 /* Ask */
-.tool-ask { background: #f5f3ff; border-color: #c4b5fd; }
+.tool-ask { background: transparent; }
 .ask-summary { color: #7c3aed; font-size: 12px; }
 .ask-body { margin-top: 8px; }
 .ask-question { margin: 8px 0; }
@@ -374,12 +377,12 @@ header.toolbar { padding: 10px 16px; gap: 14px; }
 .ask-pending { color: #9ca3af; font-style: italic; margin-top: 6px; font-size: 12px; }
 
 /* Rejection */
-.tool-rejection { background: #fef2f2; border-color: #fca5a5; }
+.tool-rejection { background: transparent; }
 .tool-rejection .tool-name { color: #991b1b; }
 .rejection-body { background: #fff; color: #7f1d1d; border-left: 3px solid #ef4444; padding: 8px 12px; font-size: 12.5px; white-space: pre-wrap; margin-top: 8px; }
 
 /* Subagent notification */
-.subagent-notification { background: #f5f3ff; border-color: #c4b5fd; }
+.subagent-notification { background: transparent; }
 .subagent-notification .tool-name { color: #6d28d9; }
 .subagent-summary { color: #6d28d9; font-size: 12px; }
 
@@ -404,40 +407,51 @@ header.toolbar { padding: 10px 16px; gap: 14px; }
 .sub-toggle:hover { border-color: var(--accent); color: var(--accent); }
 .sub-arrow { color: #9ca3af; font-size: 10px; }
 
-/* Convo grid (replaces .convo-layout / .timeline-col / .msg-col) */
-.convo-grid { display: grid; grid-template-columns: 100px 1fr; gap: 4px 14px; max-width: 1100px; margin: 0 auto; padding: 14px 18px; }
-.day-divider { grid-column: 1 / -1; text-align: center; color: #6b7280; font-size: 11px; padding: 10px 0; letter-spacing: .05em; }
-
-/* msg-row participates in the parent grid via display:contents.
-   Use @supports for subgrid where available. */
-.msg-row { display: contents; }
-@supports (grid-template-columns: subgrid) {
-  .msg-row { display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; }
+/* === v2.2 unified container + continuous timeline === */
+.convo-grid {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 0;
+  max-width: 1100px;
+  margin: 0 auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
 }
+.day-divider { grid-column: 1 / -1; text-align: center; color: #6b7280; font-size: 11px; padding: 10px 0; letter-spacing: .05em; background: #fafbfc; border-bottom: 1px solid var(--border); }
 
-.ts { font: 11px ui-monospace, Menlo, monospace; color: var(--muted); position: sticky; top: 14px; align-self: start; padding-top: 10px; }
+/* msg-row uses subgrid only. No display:contents fallback in v2.2. */
+.msg-row {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid var(--ts-color, #cbd5e1);
+}
+.msg-row:last-of-type { border-bottom: none; }
+.msg-row[data-kind="user"] { --ts-color: #3b82f6; }
+.msg-row[data-kind="assistant"] { --ts-color: #10b981; }
+.msg-row[data-kind="subagent"] { --ts-color: #7c3aed; }
+.msg-row[data-kind="tool"],
+.msg-row[data-kind="tool_edit"],
+.msg-row[data-kind="tool_read"],
+.msg-row[data-kind="tool_todowrite"],
+.msg-row[data-kind="ask"],
+.msg-row[data-kind="tool_rejection"] { --ts-color: #94a3b8; }
+.msg-row[data-kind="thinking"],
+.msg-row[data-kind="compact"],
+.msg-row[data-kind="system"],
+.msg-row[data-kind="unknown"] { --ts-color: #cbd5e1; }
+
+.ts { font: 11px ui-monospace, Menlo, monospace; color: var(--muted); position: sticky; top: 14px; align-self: start; padding: 12px 8px 12px 8px; }
 .ts .ts-time { display: block; cursor: help; }
 .ts small { display: block; font-size: 10px; color: #9ca3af; }
-/* Color the timeline cell border-left to act as a dot/line */
-.msg-row[data-kind="user"] .ts { border-left: 3px solid #3b82f6; padding-left: 6px; }
-.msg-row[data-kind="assistant"] .ts { border-left: 3px solid #10b981; padding-left: 6px; }
-.msg-row[data-kind="subagent"] .ts { border-left: 3px solid #7c3aed; padding-left: 6px; }
-.msg-row[data-kind="tool"] .ts,
-.msg-row[data-kind="tool_edit"] .ts,
-.msg-row[data-kind="tool_read"] .ts,
-.msg-row[data-kind="tool_todowrite"] .ts,
-.msg-row[data-kind="ask"] .ts,
-.msg-row[data-kind="tool_rejection"] .ts { border-left: 3px solid #94a3b8; padding-left: 6px; }
-.msg-row[data-kind="thinking"] .ts,
-.msg-row[data-kind="compact"] .ts,
-.msg-row[data-kind="system"] .ts,
-.msg-row[data-kind="unknown"] .ts { border-left: 3px solid #cbd5e1; padding-left: 6px; }
+.msg-cell { min-width: 0; padding: 12px 14px; }
 
-.msg-cell { min-width: 0; }  /* allow cards to shrink in narrow viewports */
-
-/* Per-card folding: <details> wrappers for user/assistant */
-details.row { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
-details.row.user { background: var(--user-bubble); border-color: var(--user-border); }
+/* v2.2: cards inherit container; no own border/background. Per-kind color is the .msg-row left stripe. */
+details.row { background: transparent; border: none; padding: 0; }
+details.row.user { background: transparent; border: none; }
 details.row > summary.meta { cursor: pointer; font-size: 11px; color: var(--muted); list-style: none; }
 details.row > summary.meta::-webkit-details-marker { display: none; }
 details.row > summary.meta::before { content: "▸ "; font-size: 9px; color: var(--muted); transition: transform .15s; display: inline-block; }
@@ -448,7 +462,7 @@ details.row .bubble { margin-top: 6px; }
 .skill-name { font-family: ui-monospace, Menlo, monospace; color: var(--text); font-size: 12px; }
 
 /* Agent renderer */
-.tool-agent { background: #f5f3ff; border-color: #c4b5fd; }
+.tool-agent { background: transparent; }
 .agent-type { color: #7c3aed; font-weight: 500; font-size: 12px; }
 .agent-desc { color: var(--muted); font-style: italic; font-size: 12px; max-width: 50ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

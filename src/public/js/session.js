@@ -16,6 +16,7 @@ import { renderSystemNote } from "./renderers/system-note.js";
 import { renderToolSkill } from "./renderers/tool-skill.js";
 import { renderToolAgent } from "./renderers/tool-agent.js";
 import { bindChips } from "./filter-chips.js";
+import { captureAnchor, restoreAnchor } from "./scroll-anchor.js";
 import { bindSubToggles } from "./sub-toggles.js";
 import { highlightAll } from "./highlight-q.js";
 
@@ -147,7 +148,7 @@ function quickKind(ev) {
   return "unknown";
 }
 
-function wrapMsgRow(ev, prev, innerHtml) {
+function wrapMsgRow(ev, prev, idx, innerHtml) {
   if (!innerHtml) return "";
   const kind = quickKind(ev);
   let tsHtml = "";
@@ -162,7 +163,7 @@ function wrapMsgRow(ev, prev, innerHtml) {
     const delta = prev?.timestamp ? fmtDelta(d.getTime() - new Date(prev.timestamp).getTime()) : "+前";
     tsHtml = `<time class="ts-time" title="${d.toISOString()}">${fmtTime(d)}</time><small>${delta}</small>`;
   }
-  return `${dayHtml}<div class="msg-row" data-kind="${kind}"><div class="ts">${tsHtml}</div><div class="msg-cell">${innerHtml}</div></div>`;
+  return `${dayHtml}<div class="msg-row" data-kind="${kind}" data-idx="${idx}"><div class="ts">${tsHtml}</div><div class="msg-cell">${innerHtml}</div></div>`;
 }
 
 function renderSubagentNotification(ev) {
@@ -202,11 +203,14 @@ async function main() {
   if (body.malformed) { $banner.textContent = `已忽略 ${body.malformed} 行无法解析的内容`; $banner.style.display = "block"; }
   attachCompactSummaries(body.events);
   const toolResults = buildToolResultIndex(body.events);
-  const html = body.events.map((ev, i) => wrapMsgRow(ev, body.events[i - 1], renderEvent(ev, toolResults))).join("");
+  const html = body.events.map((ev, i) => wrapMsgRow(ev, body.events[i - 1], i, renderEvent(ev, toolResults))).join("");
   $conv.innerHTML = html;
   $stats.textContent = `${body.events.length} 条事件`;
   const $filterRow = document.getElementById("filter-row");
-  bindChips($conv, $filterRow);
+  bindChips($conv, $filterRow, {
+    beforeMutate: () => captureAnchor(),
+    afterMutate: (anchor) => restoreAnchor(anchor),
+  });
   const $subToggleRow = document.getElementById("sub-toggle-row");
   bindSubToggles($conv, $subToggleRow);
   if (q) highlightAll($conv, q);
