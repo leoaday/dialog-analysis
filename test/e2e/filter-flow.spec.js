@@ -41,7 +41,7 @@ test("v2.1 string state in localStorage migrates to v2.2 object state", async ({
   const file = resolve("test/fixtures/basic.jsonl");
   await page.goto(`${cli.url}/session.html?file=${encodeURIComponent(file)}`);
   await page.evaluate(() => {
-    localStorage.setItem("da:filter:v2", JSON.stringify({ user: "folded", system: "open" }));
+    localStorage.setItem("da:filter:v2", JSON.stringify({ user: "folded", system: "open", thinking: "hidden" }));
   });
   await page.reload();
   // user → visible:true, expanded:false  (was "folded")
@@ -52,6 +52,10 @@ test("v2.1 string state in localStorage migrates to v2.2 object state", async ({
   const sysChip = page.locator('.chip[data-kind="system"]');
   await expect(sysChip).toHaveClass(/chip-visible/);
   await expect(sysChip.locator('.chip-fold')).toBeChecked();
+  // thinking → visible:false, expanded:false (was "hidden")
+  const thinkingChip = page.locator('.chip[data-kind="thinking"]');
+  await expect(thinkingChip).toHaveClass(/chip-hidden/);
+  await expect(thinkingChip.locator('.chip-fold')).not.toBeChecked();
 });
 
 test("scroll anchor preserves viewport position when hiding upstream messages", async ({ page }) => {

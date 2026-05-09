@@ -21,8 +21,10 @@ export function restoreAnchor(anchor) {
   // Try the same row first
   let row = document.querySelector(`#conversation .msg-row[data-idx="${anchor.idx}"]`);
   // Walk forward through hidden siblings until a visible row is found
-  while (row && getComputedStyle(row).display === "none") row = row.nextElementSibling;
-  if (!row) return;
+  while (row && row.classList.contains("msg-row") && getComputedStyle(row).display === "none") {
+    row = row.nextElementSibling;
+  }
+  if (!row || !row.classList.contains("msg-row")) return;
   const newTop = row.getBoundingClientRect().top;
   const delta = newTop - anchor.offsetTop;
   if (Math.abs(delta) < 1) return;

@@ -26,7 +26,7 @@ src/public/js/renderers/    one file per event/tool type
                             user, assistant, thinking, tool, tool-edit, tool-read, tool-todowrite,
                             tool-bash, tool-glob-grep, tool-web, tool-skill, tool-agent,
                             ask, tool-rejection, compact, system-note
-src/public/js/filter-chips  three-state CSS-attribute-driven filter, localStorage da:filter:v2
+src/public/js/filter-chips  dual-control CSS-attribute-driven filter, localStorage da:filter:v2
 src/public/js/sub-toggles   Tool input/output global sub-toggles, localStorage da:sub-toggles:v1
 src/public/js/session       msg-row wrapping with inline .ts (auto-aligned timestamps)
 ```
@@ -37,7 +37,7 @@ src/public/js/session       msg-row wrapping with inline .ts (auto-aligned times
 2. Add field extraction in `src/parser/extract-text.js` if it carries searchable text.
 3. Create `src/public/js/renderers/<type>.js` exporting a render function.
 4. Wire it into `src/public/js/session.js` `renderEvent()` (or `dispatchToolUse()` if it's a tool).
-5. Add the kind to `src/public/js/filter-chips.js` `KINDS` and `DEFAULTS`.
+5. Add the kind to `src/public/js/filter-chips.js` `KINDS` and `DEFAULTS_RICH`.
 6. Add a fixture line to `test/fixtures/basic.jsonl` and a unit test in `test/unit/events.test.js`.
 
 ## 4. How to change search scope
@@ -96,7 +96,7 @@ For sessions with hundreds of events the anchor lookup is O(N) on `getBoundingCl
 
 ## 9. Timeline-as-msg-row layout
 
-Each event renders as a `.msg-row` containing two grid cells: a `.ts` (timestamp) on the left and a `.msg-cell` (the content card) on the right. The `.msg-row` participates in the outer `.convo-grid` via CSS subgrid (with `display: contents` fallback). Filter chip hiding affects the entire `.msg-row` via CSS, so timestamps stay aligned to their cards automatically.
+Each event renders as a `.msg-row` containing two grid cells: a `.ts` (timestamp) on the left and a `.msg-cell` (the content card) on the right. The `.msg-row` participates in the outer `.convo-grid` via CSS subgrid only (no `display: contents` fallback as of v2.2). Filter chip hiding affects the entire `.msg-row` via CSS, so timestamps stay aligned to their cards automatically.
 
 The `.ts` element uses `position: sticky; top: 14px;` so for tall cards the timestamp stays visible at the card's top while scrolling.
 
