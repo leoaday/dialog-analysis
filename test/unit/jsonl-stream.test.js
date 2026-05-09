@@ -5,7 +5,7 @@ import { streamJsonl } from "../../src/parser/jsonl-stream.js";
 test("yields parsed objects from basic.jsonl", async () => {
   const out = [];
   for await (const ev of streamJsonl("test/fixtures/basic.jsonl")) out.push(ev);
-  assert.equal(out.length, 12);
+  assert.equal(out.length, 14);
   assert.equal(out[0].type, "queue-operation");
   assert.equal(out[1].type, "user");
 });
