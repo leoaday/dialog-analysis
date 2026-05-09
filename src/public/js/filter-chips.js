@@ -1,11 +1,10 @@
-const KEY = "da:filter:v2";
+const KEY = "da:filter:v2";  // localStorage key compatible with v2 (additive only)
 
-// Three-state chip values: "open" (show + expanded), "folded" (show + folded), "hidden"
 const ORDER = ["open", "folded", "hidden"];
 
 const KINDS = [
   "user", "assistant", "thinking", "tool", "tool_edit", "tool_read",
-  "tool_todowrite", "subagent", "ask", "tool_rejection", "system", "unknown",
+  "tool_todowrite", "subagent", "ask", "tool_rejection", "compact", "system", "unknown",
 ];
 
 const DEFAULTS = {
@@ -19,37 +18,42 @@ const DEFAULTS = {
   subagent: "folded",
   ask: "open",
   tool_rejection: "open",
+  compact: "folded",
   system: "hidden",
   unknown: "hidden",
 };
+
+function attrName(kind) { return kind.replace(/_/g, "-"); }
+function nextState(s) { return ORDER[(ORDER.indexOf(s) + 1) % ORDER.length]; }
 
 export function loadFilterState() {
   try {
     const stored = JSON.parse(localStorage.getItem(KEY) || "{}");
     return { ...DEFAULTS, ...stored };
-  } catch {
-    return { ...DEFAULTS };
-  }
+  } catch { return { ...DEFAULTS }; }
 }
 
 export function saveFilterState(s) { localStorage.setItem(KEY, JSON.stringify(s)); }
 
-function nextState(s) { return ORDER[(ORDER.indexOf(s) + 1) % ORDER.length]; }
+function injectFilterStyles() {
+  if (document.getElementById("da-filter-styles")) return;
+  const styleEl = document.createElement("style");
+  styleEl.id = "da-filter-styles";
+  styleEl.textContent = KINDS.map((k) =>
+    `body[data-show-${attrName(k)}="false"] [data-kind="${k}"] { display: none; }`
+  ).join("\n");
+  document.head.appendChild(styleEl);
+}
 
-export function applyFilter(root, state) {
-  for (const kind of KINDS) {
-    const v = state[kind] || "open";
-    const targets = root.querySelectorAll(`[data-kind="${kind}"]`);
-    for (const el of targets) {
-      el.style.display = v === "hidden" ? "none" : "";
-      // toggle inner <details> open/closed when not hidden
-      if (v !== "hidden") {
-        const details = el.querySelectorAll("details");
-        for (const d of details) d.open = v === "open";
-        if (el.tagName === "DETAILS") el.open = v === "open";
-      }
-    }
-  }
+function setBodyShow(kind, value) {
+  document.body.setAttribute(`data-show-${attrName(kind)}`, value !== "hidden" ? "true" : "false");
+}
+
+function batchSetDetails(root, kind, open) {
+  // Set every <details> within blocks of this kind, plus <details> blocks that ARE this kind.
+  const sel = `[data-kind="${kind}"] details, details[data-kind="${kind}"]`;
+  const els = root.querySelectorAll(sel);
+  for (const d of els) d.open = open;
 }
 
 function renderChip(kind, value) {
@@ -62,21 +66,41 @@ export function renderFilterRow(state) {
   return KINDS.map((k) => renderChip(k, state[k] || "open")).join("");
 }
 
+function updateChipDOM(container, kind, value) {
+  const btn = container.querySelector(`.chip[data-kind="${kind}"]`);
+  if (!btn) return;
+  btn.className = `chip chip-${value}`;
+  btn.dataset.value = value;
+  btn.title = value;
+  // re-render label so the ⊟ icon swap is correct without rebuilding the whole row
+  const symbol = value === "folded" ? "⊟" : "";
+  btn.innerHTML = `${kind}${symbol ? ` <span class="chip-icon">${symbol}</span>` : ""}`;
+}
+
 export function bindChips(root, container) {
+  injectFilterStyles();
   const state = loadFilterState();
   container.innerHTML = renderFilterRow(state);
+  // Initialize body data-show-* and details state once.
+  for (const k of KINDS) {
+    setBodyShow(k, state[k] || "open");
+    if (state[k] !== "hidden") batchSetDetails(root, k, state[k] === "open");
+  }
 
   container.addEventListener("click", (e) => {
     const btn = e.target.closest(".chip[data-kind]");
     if (!btn) return;
     const kind = btn.dataset.kind;
-    state[kind] = nextState(state[kind] || "open");
+    const v = nextState(state[kind] || "open");
+    state[kind] = v;
     saveFilterState(state);
-    container.innerHTML = renderFilterRow(state);
-    applyFilter(root, state);
+    updateChipDOM(container, kind, v);
+    setBodyShow(kind, v);
+    if (v !== "hidden") batchSetDetails(root, kind, v === "open");
   });
 
-  applyFilter(root, state);
-  // per-block <details> override: clicking summary stays per-block
   return state;
 }
+
+// Back-compat exports — kept for any external import (currently none).
+export function applyFilter(_root, _state) { /* no-op: handled per-chip and via CSS */ }
