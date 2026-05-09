@@ -18,7 +18,6 @@ import { renderToolAgent } from "./renderers/tool-agent.js";
 import { bindChips } from "./filter-chips.js";
 import { bindSubToggles } from "./sub-toggles.js";
 import { highlightAll } from "./highlight-q.js";
-import { buildTimeline, renderTimelineColumn } from "./timeline.js";
 
 const REJECTION_PREFIXES = ["User rejected", "The user doesn't want to proceed with this tool use", "[Request interrupted by user"];
 function isToolRejection(toolResult) {
@@ -100,23 +99,70 @@ function dispatchToolUse(toolUse, toolResult) {
   return renderTool(toolUse, toolResult, "tool");
 }
 
-function quickClassify(ev) {
+function pad2(n) { return String(n).padStart(2, "0"); }
+function fmtTime(d) { return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`; }
+function fmtDate(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+function fmtDelta(ms) {
+  if (ms === null || ms === undefined) return "";
+  const abs = Math.abs(ms);
+  const sign = ms < 0 ? "−" : "+";
+  if (abs < 1000) return `${sign}0s`;
+  if (abs < 60_000) return `${sign}${Math.floor(abs / 1000)}s`;
+  if (abs < 3_600_000) return `${sign}${Math.floor(abs / 60_000)}m`;
+  if (abs < 86_400_000) return `${sign}${Math.floor(abs / 3_600_000)}h`;
+  return `${sign}${Math.floor(abs / 86_400_000)}d`;
+}
+
+function quickKind(ev) {
+  // Lightweight kind tagging used for filter + dot color. Fully redundant with classifyEvent
+  // but inlined to avoid re-importing the server module.
   if (!ev || typeof ev !== "object") return "unknown";
+  if (ev.type === "system") return ev.subtype === "compact_boundary" ? "compact" : "system";
+  if (ev.type === "queue-operation" || ev.type === "last-prompt") return "system";
   if (ev.type === "user") {
     if (typeof ev.message?.content === "string" && ev.message.content.startsWith("<task-notification>")) return "subagent";
+    if (ev.isCompactSummary) return "compact";
+    if (ev.isMeta) return "system";
+    const arr = Array.isArray(ev.message?.content) ? ev.message.content : [];
+    if (arr.length && arr.every((p) => p.type === "tool_result")) return "tool_result";
     return "user";
   }
   if (ev.type === "assistant") {
     const arr = Array.isArray(ev.message?.content) ? ev.message.content : [];
     const tu = arr.find((p) => p.type === "tool_use");
-    if (!tu) return "assistant";
-    const n = tu.name || "";
-    if (n === "Edit" || n === "MultiEdit" || n === "Write") return "tool";
-    if (n === "Read") return "tool";
-    if (n === "Agent" || n === "Task") return "subagent";
-    return "tool";
+    if (tu) {
+      const n = tu.name || "";
+      if (n === "Edit" || n === "MultiEdit" || n === "Write") return "tool_edit";
+      if (n === "Read") return "tool_read";
+      if (n === "TodoWrite") return "tool_todowrite";
+      if (n === "Agent" || n === "Task") return "subagent";
+      if (n === "AskUserQuestion") return "ask";
+      return "tool";
+    }
+    if (arr.some((p) => p.type === "thinking") && !arr.some((p) => p.type === "text")) return "thinking";
+    if (arr.some((p) => p.type === "text")) return "assistant";
+    if (arr.some((p) => p.type === "thinking")) return "thinking";
+    return "unknown";
   }
-  return "system";
+  return "unknown";
+}
+
+function wrapMsgRow(ev, prev, innerHtml) {
+  if (!innerHtml) return "";
+  const kind = quickKind(ev);
+  let tsHtml = "";
+  let dayHtml = "";
+  if (ev?.timestamp) {
+    const d = new Date(ev.timestamp);
+    const dateKey = fmtDate(d);
+    const prevDateKey = prev?.timestamp ? fmtDate(new Date(prev.timestamp)) : "";
+    if (dateKey !== prevDateKey) {
+      dayHtml = `<div class="day-divider">── ${dateKey} ──</div>`;
+    }
+    const delta = prev?.timestamp ? fmtDelta(d.getTime() - new Date(prev.timestamp).getTime()) : "+前";
+    tsHtml = `<time class="ts-time" title="${d.toISOString()}">${fmtTime(d)}</time><small>${delta}</small>`;
+  }
+  return `${dayHtml}<div class="msg-row" data-kind="${kind}"><div class="ts">${tsHtml}</div><div class="msg-cell">${innerHtml}</div></div>`;
 }
 
 function renderSubagentNotification(ev) {
@@ -155,13 +201,8 @@ async function main() {
   catch (e) { $banner.textContent = `加载失败：${e.message}`; $banner.style.display = "block"; return; }
   if (body.malformed) { $banner.textContent = `已忽略 ${body.malformed} 行无法解析的内容`; $banner.style.display = "block"; }
   attachCompactSummaries(body.events);
-  // Tag events with their classified kind for timeline coloring (best effort, no server roundtrip)
-  for (const ev of body.events) ev._kind = quickClassify(ev);
-  const timeline = buildTimeline(body.events);
-  const $timeline = document.getElementById("timeline");
-  $timeline.innerHTML = renderTimelineColumn(timeline);
   const toolResults = buildToolResultIndex(body.events);
-  const html = body.events.map((ev) => renderEvent(ev, toolResults)).join("");
+  const html = body.events.map((ev, i) => wrapMsgRow(ev, body.events[i - 1], renderEvent(ev, toolResults))).join("");
   $conv.innerHTML = html;
   $stats.textContent = `${body.events.length} 条事件`;
   const $filterRow = document.getElementById("filter-row");
