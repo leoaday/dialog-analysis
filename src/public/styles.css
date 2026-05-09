@@ -59,7 +59,7 @@
     #drop button { margin-top: 16px; padding: 8px 18px; font: inherit; background: var(--accent); color: white; border: 0; border-radius: 6px; cursor: pointer; }
 
     /* Conversation */
-    #conversation { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    #conversation { max-width: 980px; margin: 0 auto; }
 
     .row { display: flex; flex-direction: column; }
     .row.user { align-items: flex-end; }
@@ -314,21 +314,6 @@ header.toolbar { padding: 10px 16px; gap: 14px; }
 .chip-folded .chip-icon { color: #9ca3af; font-size: 10px; }
 .chip-hidden { background: #f3f4f6; color: #9ca3af; text-decoration: line-through; border-color: #e3e6eb; }
 
-/* Convo two-column layout */
-.convo-layout { display: grid; grid-template-columns: 100px 1fr; max-width: 1100px; margin: 0 auto; min-height: 60vh; }
-.timeline-col { padding: 12px 0 12px 16px; position: relative; font: 11px ui-monospace, Menlo, monospace; color: var(--muted); }
-.timeline-col::before { content: ""; position: absolute; left: 78px; top: 0; bottom: 0; width: 1px; background: var(--border); }
-.timeline-tick { position: relative; padding: 8px 0; line-height: 1.2; }
-.timeline-tick .time { display: block; cursor: help; }
-.timeline-tick .delta { display: block; font-size: 10px; color: #9ca3af; }
-.timeline-tick .dot { position: absolute; left: 74px; top: 11px; width: 9px; height: 9px; border-radius: 50%; background: #fff; border: 2px solid #cbd5e1; }
-.timeline-tick[data-kind="user"] .dot { border-color: #3b82f6; background: #dbeafe; }
-.timeline-tick[data-kind="assistant"] .dot { border-color: #10b981; background: #d1fae5; }
-.timeline-tick[data-kind="tool"] .dot { border-color: #94a3b8; background: #fff; }
-.timeline-tick[data-kind="subagent"] .dot { border-color: #7c3aed; background: #ede9fe; }
-.timeline-day { padding: 10px 0; color: #6b7280; font-weight: 600; text-align: center; font-size: 11px; letter-spacing: .05em; }
-
-.msg-col { padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
 
 /* Tool head: name + path/summary + tool-id at right */
 .tool { background: var(--tool-bg); border: 1px solid var(--tool-border); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
@@ -400,12 +385,6 @@ header.toolbar { padding: 10px 16px; gap: 14px; }
 
 /* Filter visibility — applied via JS by setting display:none; here just smooth out */
 [data-kind] { transition: opacity .1s; }
-
-/* Responsive: collapse timeline at narrow widths */
-@media (max-width: 800px) {
-  .convo-layout { grid-template-columns: 1fr; }
-  .timeline-col { display: none; }
-}
 
 /* === Detail page v2.1 === */
 
