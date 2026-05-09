@@ -40,7 +40,7 @@ function injectFilterStyles() {
   const styleEl = document.createElement("style");
   styleEl.id = "da-filter-styles";
   styleEl.textContent = KINDS.map((k) =>
-    `body[data-show-${attrName(k)}="false"] [data-kind="${k}"] { display: none; }`
+    `body[data-show-${attrName(k)}="false"] #conversation [data-kind="${k}"] { display: none; }`
   ).join("\n");
   document.head.appendChild(styleEl);
 }
