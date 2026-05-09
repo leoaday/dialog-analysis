@@ -302,3 +302,107 @@ mark { background:#fef08a; padding:0 2px; border-radius:2px; }
 /* Subagent detail page accent */
 body.kind-subagent header.toolbar { background: #f5f3ff; border-bottom-color: #c4b5fd; }
 body.kind-subagent header.toolbar h1::before { content: "subagent · "; color: #7c3aed; font-weight: 600; }
+
+/* === Detail page v2 === */
+/* Toolbar + filter chips */
+header.toolbar { padding: 10px 16px; gap: 14px; }
+.filter-row { background: #fafbfc; border-bottom: 1px solid var(--border); padding: 8px 16px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 12px; }
+.filter-label { color: var(--muted); margin-right: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border: 1px solid var(--border); border-radius: 14px; cursor: pointer; user-select: none; background: #fff; font: 12px/1.2 -apple-system, sans-serif; color: var(--text); }
+.chip-open { background: #eef4ff; color: var(--accent); border-color: var(--accent); }
+.chip-folded { background: #eef4ff; color: var(--accent); border-color: var(--accent); }
+.chip-folded .chip-icon { color: #9ca3af; font-size: 10px; }
+.chip-hidden { background: #f3f4f6; color: #9ca3af; text-decoration: line-through; border-color: #e3e6eb; }
+
+/* Convo two-column layout */
+.convo-layout { display: grid; grid-template-columns: 100px 1fr; max-width: 1100px; margin: 0 auto; min-height: 60vh; }
+.timeline-col { padding: 12px 0 12px 16px; position: relative; font: 11px ui-monospace, Menlo, monospace; color: var(--muted); }
+.timeline-col::before { content: ""; position: absolute; left: 78px; top: 0; bottom: 0; width: 1px; background: var(--border); }
+.timeline-tick { position: relative; padding: 8px 0; line-height: 1.2; }
+.timeline-tick .time { display: block; cursor: help; }
+.timeline-tick .delta { display: block; font-size: 10px; color: #9ca3af; }
+.timeline-tick .dot { position: absolute; left: 74px; top: 11px; width: 9px; height: 9px; border-radius: 50%; background: #fff; border: 2px solid #cbd5e1; }
+.timeline-tick[data-kind="user"] .dot { border-color: #3b82f6; background: #dbeafe; }
+.timeline-tick[data-kind="assistant"] .dot { border-color: #10b981; background: #d1fae5; }
+.timeline-tick[data-kind="tool"] .dot { border-color: #94a3b8; background: #fff; }
+.timeline-tick[data-kind="subagent"] .dot { border-color: #7c3aed; background: #ede9fe; }
+.timeline-day { padding: 10px 0; color: #6b7280; font-weight: 600; text-align: center; font-size: 11px; letter-spacing: .05em; }
+
+.msg-col { padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
+
+/* Tool head: name + path/summary + tool-id at right */
+.tool { background: var(--tool-bg); border: 1px solid var(--tool-border); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+.tool-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tool-name { font-weight: 600; color: var(--text); }
+.tool-id { margin-left: auto; color: #9ca3af; font-size: 11px; cursor: help; font-family: ui-monospace, Menlo, monospace; }
+.tool-section { margin-top: 8px; }
+.tool-section > summary { cursor: pointer; font-size: 12px; color: var(--muted); list-style: none; }
+.tool-section > summary::before { content: "▶ "; font-size: 9px; color: var(--muted); transition: transform .15s; display: inline-block; }
+.tool-section[open] > summary::before { transform: rotate(90deg); }
+.tool-section pre { margin: 6px 0 0; padding: 8px 10px; background: #0f172a; color: #e2e8f0; border-radius: 4px; overflow: auto; font-size: 12px; max-height: 360px; }
+
+/* Edit diff */
+.edit-path { color: var(--text); font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+.diff-count { font-family: ui-monospace, Menlo, monospace; font-size: 11px; }
+.diff-count .add { color: #0d6e3b; }
+.diff-count .del { color: #9d2235; }
+.diff-body { font: 12px/1.6 ui-monospace, Menlo, monospace; background: #fafbfc; border-radius: 4px; padding: 6px 0; margin-top: 6px; }
+.diff-line { padding: 1px 8px; }
+.diff-line.del { background: #ffeef0; color: #9d2235; }
+.diff-line.add { background: #e6ffec; color: #0d6e3b; }
+.diff-line.ctx { color: #6b7280; }
+.diff-sym { display: inline-block; width: 14px; user-select: none; color: #aaa; text-align: center; }
+
+/* TodoWrite */
+.todo-summary { color: var(--muted); font-size: 12px; }
+.todo-list { padding: 6px 0; }
+.todo-item { display: flex; gap: 8px; padding: 2px 0; font-size: 13px; }
+.todo-item .box { color: #7c3aed; }
+.todo-item.done .box { color: #10b981; }
+.todo-item.done .text { color: #9ca3af; text-decoration: line-through; }
+.todo-item.active .box { color: #f59e0b; }
+
+/* Bash */
+.bash-cmd { font-family: ui-monospace, Menlo, monospace; color: #0d6e3b; font-size: 12.5px; }
+.bash-out { background: #0f172a; color: #e2e8f0; }
+
+/* Read */
+.read-path, .read-meta { font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+.read-meta .meta-key { color: #9ca3af; display: inline-block; min-width: 70px; }
+.read-note { color: var(--muted); font-style: italic; margin-top: 6px; }
+
+/* Glob/Grep/WebSearch */
+.search-summary { color: var(--muted); font-size: 12px; }
+.search-out { font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; }
+
+/* WebFetch */
+.web-url, .web-query { font-family: ui-monospace, Menlo, monospace; color: var(--text); font-size: 12.5px; }
+.web-meta div { margin: 4px 0; font-size: 12px; }
+
+/* Ask */
+.tool-ask { background: #f5f3ff; border-color: #c4b5fd; }
+.ask-summary { color: #7c3aed; font-size: 12px; }
+.ask-body { margin-top: 8px; }
+.ask-question { margin: 8px 0; }
+.ask-q-text { font-weight: 500; margin-bottom: 4px; }
+.ask-options { margin: 4px 0 0 16px; padding: 0; font-size: 12.5px; color: var(--muted); }
+.ask-pending { color: #9ca3af; font-style: italic; margin-top: 6px; font-size: 12px; }
+
+/* Rejection */
+.tool-rejection { background: #fef2f2; border-color: #fca5a5; }
+.tool-rejection .tool-name { color: #991b1b; }
+.rejection-body { background: #fff; color: #7f1d1d; border-left: 3px solid #ef4444; padding: 8px 12px; font-size: 12.5px; white-space: pre-wrap; margin-top: 8px; }
+
+/* Subagent notification */
+.subagent-notification { background: #f5f3ff; border-color: #c4b5fd; }
+.subagent-notification .tool-name { color: #6d28d9; }
+.subagent-summary { color: #6d28d9; font-size: 12px; }
+
+/* Filter visibility — applied via JS by setting display:none; here just smooth out */
+[data-kind] { transition: opacity .1s; }
+
+/* Responsive: collapse timeline at narrow widths */
+@media (max-width: 800px) {
+  .convo-layout { grid-template-columns: 1fr; }
+  .timeline-col { display: none; }
+}

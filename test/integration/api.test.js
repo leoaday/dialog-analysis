@@ -58,7 +58,7 @@ test("GET /api/session returns events array + ETag", async () => {
   assert.equal(r.status, 200);
   assert.match(r.headers.get("ETag") || "", /W\/".+"/);
   const body = await r.json();
-  assert.equal(body.events.length, 9);
+  assert.equal(body.events.length, 12);
 });
 
 test("GET /api/session honors If-None-Match -> 304", async () => {

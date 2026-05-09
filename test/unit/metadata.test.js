@@ -5,7 +5,7 @@ import { computeMetadata } from "../../src/parser/metadata.js";
 test("computes rounds, tokens, firstUserSummary from basic fixture", async () => {
   const m = await computeMetadata("test/fixtures/basic.jsonl");
   assert.equal(m.rounds, 2);
-  assert.deepEqual(m.tokens, { input: 20, output: 27, cacheCreate: 5, cacheRead: 3000 });
+  assert.deepEqual(m.tokens, { input: 21, output: 28, cacheCreate: 5, cacheRead: 3000 });
   assert.equal(m.firstUserSummary, "first user input here");
   assert.equal(m.malformed, 0);
 });

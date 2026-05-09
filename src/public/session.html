@@ -22,17 +22,17 @@
     <a href="/" id="back">← 会话列表</a>
     <h1 id="title" style="margin:0;font-size:14px;font-weight:600;"></h1>
     <div class="stats" id="stats"></div>
-    <div class="actions" style="margin-left:auto;display:flex;gap:10px;">
-      <label class="toggle"><input type="checkbox" data-fold="thinking"> 思考</label>
-      <label class="toggle"><input type="checkbox" data-fold="tool"> 工具</label>
-      <label class="toggle"><input type="checkbox" data-fold="system"> 系统</label>
-      <label class="toggle"><input type="checkbox" data-fold="subagent"> subagent</label>
-      <label class="toggle"><input type="checkbox" data-fold="askUserQuestion"> 提问</label>
-    </div>
   </header>
+  <div class="filter-row">
+    <span class="filter-label">显示：</span>
+    <span id="filter-row"></span>
+  </div>
   <main>
     <div id="banner" style="display:none;"></div>
-    <div id="conversation"></div>
+    <div class="convo-layout">
+      <div id="timeline" class="timeline-col"></div>
+      <div id="conversation" class="msg-col"></div>
+    </div>
   </main>
   <script type="module" src="/js/session.js"></script>
 </body>

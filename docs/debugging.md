@@ -20,21 +20,22 @@ node bin/cli.js --no-open   # start without launching browser
 bin/cli.js                  argv → server → browser
 src/server.js               http router (all GET, 127.0.0.1 only)
 src/routes/                 list-dir, sessions, session, search
-src/parser/                 jsonl-stream, events, metadata, extract-text, subagent-index, search, metadata-cache
+src/parser/                 jsonl-stream, events (12 kinds), metadata, extract-text, subagent-index, search, metadata-cache
 src/public/                 static assets; session.html and index.html
-src/public/js/renderers/    one file per event type (user/assistant/thinking/tool/compact/system-note)
-src/public/js/fold-toggles  per-type toggle group (default + localStorage)
+src/public/js/renderers/    one file per event/tool type
+                            user, assistant, thinking, tool, tool-edit, tool-read, tool-todowrite,
+                            tool-bash, tool-glob-grep, tool-web, ask, tool-rejection, compact, system-note
+src/public/js/filter-chips  three-state filter (open / folded / hidden) per kind, localStorage
+src/public/js/timeline      left-column timeline (browser-local TZ, delta to previous event)
 ```
-
-Every file capped at ~200 lines. New event types must be added in two symmetric places: `src/parser/events.js` and `src/public/js/renderers/<type>.js`.
 
 ## 3. How to add a new event type
 
-1. Add classification branch in `src/parser/events.js` `classifyEvent()`.
+1. Add classification branch in `src/parser/events.js` (`classifyEvent` and helpers if needed).
 2. Add field extraction in `src/parser/extract-text.js` if it carries searchable text.
 3. Create `src/public/js/renderers/<type>.js` exporting a render function.
-4. Wire it into `src/public/js/session.js` `renderEvent()`.
-5. If user-visible, add a toggle in `src/public/session.html` and a default in `src/public/js/fold-toggles.js` `DEFAULT`.
+4. Wire it into `src/public/js/session.js` `renderEvent()` (or `dispatchToolUse()` if it's a tool).
+5. Add the kind to `src/public/js/filter-chips.js` `KINDS` and `DEFAULTS`.
 6. Add a fixture line to `test/fixtures/basic.jsonl` and a unit test in `test/unit/events.test.js`.
 
 ## 4. How to change search scope
@@ -62,7 +63,18 @@ When asking an AI to modify this codebase, paste this list at the end of the pro
 - [ ] No file exceeds ~200 lines (split if so)
 - [ ] No ad-hoc backwards-compat shims for removed code
 
-## 7. Why these design decisions
+## 7. Filter chips behavior
+
+Each kind chip cycles through three states on click:
+- **open**: shown, all `<details>` inside open
+- **folded**: shown, all `<details>` inside closed
+- **hidden**: removed from layout (`display: none`)
+
+State persists to `localStorage["da:filter:v2"]`. Defaults are in `src/public/js/filter-chips.js` `DEFAULTS`. The chip control supersedes the old single-checkbox toggles from v1.
+
+Per-block override: while a chip is in "folded" state, you can click an individual `<details>` summary inside any block to expand just that one (DOM state changes locally; chip global state does not flip).
+
+## 8. Why these design decisions
 
 | Decision | Reason |
 |---|---|
