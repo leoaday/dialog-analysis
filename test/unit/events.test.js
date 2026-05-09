@@ -42,8 +42,14 @@ test("classifyEvent: tool_todowrite", () => assert.equal(classifyEvent(toolUseTo
 test("classifyEvent: subagent (Agent)", () => assert.equal(classifyEvent(toolUseAgent), "subagent"));
 test("classifyEvent: subagent (task-notification user)", () => assert.equal(classifyEvent(taskNotif), "subagent"));
 test("classifyEvent: ask", () => assert.equal(classifyEvent(toolUseAsk), "ask"));
-test("classifyEvent: compact_summary", () => assert.equal(classifyEvent(compactSummary), "system"));
-test("classifyEvent: compact_boundary", () => assert.equal(classifyEvent({ type: "system", subtype: "compact_boundary" }), "system"));
+test("classifyEvent: compact_summary", () => assert.equal(classifyEvent(compactSummary), "compact"));
+test("classifyEvent: compact_boundary", () => assert.equal(classifyEvent({ type: "system", subtype: "compact_boundary" }), "compact"));
 test("classifyEvent: queue-operation", () => assert.equal(classifyEvent({ type: "queue-operation", operation: "enqueue" }), "system"));
 test("classifyEvent: stop_hook_summary", () => assert.equal(classifyEvent({ type: "system", subtype: "stop_hook_summary" }), "system"));
 test("classifyEvent: unknown", () => assert.equal(classifyEvent({ type: "weird-novel-type" }), "unknown"));
+test("classifyEvent: compact_boundary -> compact", () =>
+  assert.equal(classifyEvent({ type: "system", subtype: "compact_boundary", compactMetadata: { preTokens: 1000, trigger: "auto" } }), "compact"));
+test("classifyEvent: isCompactSummary user -> compact", () =>
+  assert.equal(classifyEvent({ type: "user", isCompactSummary: true, message: { role: "user", content: "summary" } }), "compact"));
+test("classifyEvent: last-prompt -> system", () =>
+  assert.equal(classifyEvent({ type: "last-prompt", lastPrompt: "anything", sessionId: "x" }), "system"));

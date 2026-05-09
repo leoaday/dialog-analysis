@@ -10,3 +10,5 @@
 {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_2","name":"AskUserQuestion","input":{"questions":[{"question":"choose","options":[{"label":"a"},{"label":"b"}]}]}}],"usage":{"input_tokens":1,"output_tokens":1,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}},"timestamp":"2026-04-29T10:01:00.000Z","uuid":"a4"}
 {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_3","content":"User rejected the proposed Edit. They said:\nNot needed."}]},"timestamp":"2026-04-29T10:01:01.000Z","uuid":"u5"}
 {"type":"user","message":{"role":"user","content":"<task-notification>\n<task-id>abc</task-id>\n<status>completed</status>\n<summary>research done</summary>\n<result>findings text</result>\n</task-notification>"},"timestamp":"2026-04-29T10:01:02.000Z","uuid":"u6"}
+{"type":"system","subtype":"compact_boundary","compactMetadata":{"preTokens":50000,"trigger":"auto"},"timestamp":"2026-04-29T10:01:03.000Z","uuid":"sys2"}
+{"type":"last-prompt","lastPrompt":"快照测试","sessionId":"basic-test","timestamp":"2026-04-29T10:01:04.000Z"}

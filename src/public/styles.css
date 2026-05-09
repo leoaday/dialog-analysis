@@ -59,7 +59,7 @@
     #drop button { margin-top: 16px; padding: 8px 18px; font: inherit; background: var(--accent); color: white; border: 0; border-radius: 6px; cursor: pointer; }
 
     /* Conversation */
-    #conversation { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    #conversation { max-width: 980px; margin: 0 auto; }
 
     .row { display: flex; flex-direction: column; }
     .row.user { align-items: flex-end; }
@@ -314,21 +314,6 @@ header.toolbar { padding: 10px 16px; gap: 14px; }
 .chip-folded .chip-icon { color: #9ca3af; font-size: 10px; }
 .chip-hidden { background: #f3f4f6; color: #9ca3af; text-decoration: line-through; border-color: #e3e6eb; }
 
-/* Convo two-column layout */
-.convo-layout { display: grid; grid-template-columns: 100px 1fr; max-width: 1100px; margin: 0 auto; min-height: 60vh; }
-.timeline-col { padding: 12px 0 12px 16px; position: relative; font: 11px ui-monospace, Menlo, monospace; color: var(--muted); }
-.timeline-col::before { content: ""; position: absolute; left: 78px; top: 0; bottom: 0; width: 1px; background: var(--border); }
-.timeline-tick { position: relative; padding: 8px 0; line-height: 1.2; }
-.timeline-tick .time { display: block; cursor: help; }
-.timeline-tick .delta { display: block; font-size: 10px; color: #9ca3af; }
-.timeline-tick .dot { position: absolute; left: 74px; top: 11px; width: 9px; height: 9px; border-radius: 50%; background: #fff; border: 2px solid #cbd5e1; }
-.timeline-tick[data-kind="user"] .dot { border-color: #3b82f6; background: #dbeafe; }
-.timeline-tick[data-kind="assistant"] .dot { border-color: #10b981; background: #d1fae5; }
-.timeline-tick[data-kind="tool"] .dot { border-color: #94a3b8; background: #fff; }
-.timeline-tick[data-kind="subagent"] .dot { border-color: #7c3aed; background: #ede9fe; }
-.timeline-day { padding: 10px 0; color: #6b7280; font-weight: 600; text-align: center; font-size: 11px; letter-spacing: .05em; }
-
-.msg-col { padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
 
 /* Tool head: name + path/summary + tool-id at right */
 .tool { background: var(--tool-bg); border: 1px solid var(--tool-border); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
@@ -401,8 +386,76 @@ header.toolbar { padding: 10px 16px; gap: 14px; }
 /* Filter visibility — applied via JS by setting display:none; here just smooth out */
 [data-kind] { transition: opacity .1s; }
 
-/* Responsive: collapse timeline at narrow widths */
+/* === Detail page v2.1 === */
+
+/* Dot legend in toolbar (4 colors) */
+.dot-legend { display: flex; align-items: center; gap: 14px; padding: 6px 16px; background: #fff; border-bottom: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+.legend-item { display: inline-flex; align-items: center; gap: 4px; }
+.legend-item .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; border: 2px solid currentColor; background: currentColor; }
+.legend-item .dot.dot-user { color: #3b82f6; }
+.legend-item .dot.dot-assistant { color: #10b981; }
+.legend-item .dot.dot-tool { color: #94a3b8; }
+.legend-item .dot.dot-subagent { color: #7c3aed; }
+
+/* Sub-toggle (Tool: Input ▾ Output ▸) */
+.sub-toggle-row { margin-left: auto; display: inline-flex; gap: 6px; align-items: center; }
+.sub-label { color: var(--muted); font-size: 11px; }
+.sub-toggle { padding: 2px 8px; border: 1px solid var(--border); border-radius: 4px; background: #fff; font: 11px -apple-system, sans-serif; cursor: pointer; color: var(--text); }
+.sub-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.sub-arrow { color: #9ca3af; font-size: 10px; }
+
+/* Convo grid (replaces .convo-layout / .timeline-col / .msg-col) */
+.convo-grid { display: grid; grid-template-columns: 100px 1fr; gap: 4px 14px; max-width: 1100px; margin: 0 auto; padding: 14px 18px; }
+.day-divider { grid-column: 1 / -1; text-align: center; color: #6b7280; font-size: 11px; padding: 10px 0; letter-spacing: .05em; }
+
+/* msg-row participates in the parent grid via display:contents.
+   Use @supports for subgrid where available. */
+.msg-row { display: contents; }
+@supports (grid-template-columns: subgrid) {
+  .msg-row { display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; }
+}
+
+.ts { font: 11px ui-monospace, Menlo, monospace; color: var(--muted); position: sticky; top: 14px; align-self: start; padding-top: 10px; }
+.ts .ts-time { display: block; cursor: help; }
+.ts small { display: block; font-size: 10px; color: #9ca3af; }
+/* Color the timeline cell border-left to act as a dot/line */
+.msg-row[data-kind="user"] .ts { border-left: 3px solid #3b82f6; padding-left: 6px; }
+.msg-row[data-kind="assistant"] .ts { border-left: 3px solid #10b981; padding-left: 6px; }
+.msg-row[data-kind="subagent"] .ts { border-left: 3px solid #7c3aed; padding-left: 6px; }
+.msg-row[data-kind="tool"] .ts,
+.msg-row[data-kind="tool_edit"] .ts,
+.msg-row[data-kind="tool_read"] .ts,
+.msg-row[data-kind="tool_todowrite"] .ts,
+.msg-row[data-kind="ask"] .ts,
+.msg-row[data-kind="tool_rejection"] .ts { border-left: 3px solid #94a3b8; padding-left: 6px; }
+.msg-row[data-kind="thinking"] .ts,
+.msg-row[data-kind="compact"] .ts,
+.msg-row[data-kind="system"] .ts,
+.msg-row[data-kind="unknown"] .ts { border-left: 3px solid #cbd5e1; padding-left: 6px; }
+
+.msg-cell { min-width: 0; }  /* allow cards to shrink in narrow viewports */
+
+/* Per-card folding: <details> wrappers for user/assistant */
+details.row { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
+details.row.user { background: var(--user-bubble); border-color: var(--user-border); }
+details.row > summary.meta { cursor: pointer; font-size: 11px; color: var(--muted); list-style: none; }
+details.row > summary.meta::-webkit-details-marker { display: none; }
+details.row > summary.meta::before { content: "▸ "; font-size: 9px; color: var(--muted); transition: transform .15s; display: inline-block; }
+details.row[open] > summary.meta::before { transform: rotate(90deg); }
+details.row .bubble { margin-top: 6px; }
+
+/* Skill renderer */
+.skill-name { font-family: ui-monospace, Menlo, monospace; color: var(--text); font-size: 12px; }
+
+/* Agent renderer */
+.tool-agent { background: #f5f3ff; border-color: #c4b5fd; }
+.agent-type { color: #7c3aed; font-weight: 500; font-size: 12px; }
+.agent-desc { color: var(--muted); font-style: italic; font-size: 12px; max-width: 50ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Old v2 timeline-col / convo-layout removed; if any rule referenced them, no harm. */
+
+/* Responsive: collapse timeline column at narrow widths */
 @media (max-width: 800px) {
-  .convo-layout { grid-template-columns: 1fr; }
-  .timeline-col { display: none; }
+  .convo-grid { grid-template-columns: 0 1fr; }
+  .ts { display: none; }
 }

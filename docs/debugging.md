@@ -20,13 +20,15 @@ node bin/cli.js --no-open   # start without launching browser
 bin/cli.js                  argv → server → browser
 src/server.js               http router (all GET, 127.0.0.1 only)
 src/routes/                 list-dir, sessions, session, search
-src/parser/                 jsonl-stream, events (12 kinds), metadata, extract-text, subagent-index, search, metadata-cache
+src/parser/                 jsonl-stream, events (13 kinds), metadata, extract-text, subagent-index, search, metadata-cache
 src/public/                 static assets; session.html and index.html
 src/public/js/renderers/    one file per event/tool type
                             user, assistant, thinking, tool, tool-edit, tool-read, tool-todowrite,
-                            tool-bash, tool-glob-grep, tool-web, ask, tool-rejection, compact, system-note
-src/public/js/filter-chips  three-state filter (open / folded / hidden) per kind, localStorage
-src/public/js/timeline      left-column timeline (browser-local TZ, delta to previous event)
+                            tool-bash, tool-glob-grep, tool-web, tool-skill, tool-agent,
+                            ask, tool-rejection, compact, system-note
+src/public/js/filter-chips  three-state CSS-attribute-driven filter, localStorage da:filter:v2
+src/public/js/sub-toggles   Tool input/output global sub-toggles, localStorage da:sub-toggles:v1
+src/public/js/session       msg-row wrapping with inline .ts (auto-aligned timestamps)
 ```
 
 ## 3. How to add a new event type
@@ -70,11 +72,25 @@ Each kind chip cycles through three states on click:
 - **folded**: shown, all `<details>` inside closed
 - **hidden**: removed from layout (`display: none`)
 
-State persists to `localStorage["da:filter:v2"]`. Defaults are in `src/public/js/filter-chips.js` `DEFAULTS`. The chip control supersedes the old single-checkbox toggles from v1.
+State persists to `localStorage["da:filter:v2"]`. Defaults are in `src/public/js/filter-chips.js` `DEFAULTS` (13 kinds; `system` and `unknown` default to `hidden`).
 
-Per-block override: while a chip is in "folded" state, you can click an individual `<details>` summary inside any block to expand just that one (DOM state changes locally; chip global state does not flip).
+**Performance model (v2.1):** chip clicks update only the clicked kind. Body data attribute (`data-show-<kind>`) toggles `display:none` via CSS rules generated at page load. `<details open>` state updates use a single batched query limited to that kind. Expected click → render time: < 5ms.
 
-## 8. Why these design decisions
+**Tool input/output sub-toggles**: separate global toggles to the right of the chip row control whether tool blocks' Input and Output `<details>` start open or folded. State persists to `localStorage["da:sub-toggles:v1"]`. These are orthogonal to chips: chips control card visibility/fold; sub-toggles control inner detail state.
+
+**Per-card override**: clicking any card's summary toggles just that card. chip changes will subsequently override per-card state (chip state always wins on the next chip click).
+
+## 8. Timeline-as-msg-row layout
+
+Each event renders as a `.msg-row` containing two grid cells: a `.ts` (timestamp) on the left and a `.msg-cell` (the content card) on the right. The `.msg-row` participates in the outer `.convo-grid` via CSS subgrid (with `display: contents` fallback). Filter chip hiding affects the entire `.msg-row` via CSS, so timestamps stay aligned to their cards automatically.
+
+The `.ts` element uses `position: sticky; top: 14px;` so for tall cards the timestamp stays visible at the card's top while scrolling.
+
+Events without a `timestamp` field render an empty `.ts` (no time, no border-left dot — just empty space).
+
+Cross-day boundaries insert a `.day-divider` row spanning both columns: `── 2026-05-09 ──`.
+
+## 9. Why these design decisions
 
 | Decision | Reason |
 |---|---|
