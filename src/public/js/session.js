@@ -13,7 +13,10 @@ import { renderAsk } from "./renderers/ask.js";
 import { renderToolRejection } from "./renderers/tool-rejection.js";
 import { renderCompact } from "./renderers/compact.js";
 import { renderSystemNote } from "./renderers/system-note.js";
+import { renderToolSkill } from "./renderers/tool-skill.js";
+import { renderToolAgent } from "./renderers/tool-agent.js";
 import { bindChips } from "./filter-chips.js";
+import { bindSubToggles } from "./sub-toggles.js";
 import { highlightAll } from "./highlight-q.js";
 import { buildTimeline, renderTimelineColumn } from "./timeline.js";
 
@@ -92,7 +95,8 @@ function dispatchToolUse(toolUse, toolResult) {
   if (name === "Glob" || name === "Grep") return renderToolGlobGrep(toolUse, toolResult);
   if (name === "WebFetch" || name === "WebSearch") return renderToolWeb(toolUse, toolResult);
   if (name === "AskUserQuestion") return renderAsk(toolUse, toolResult);
-  if (name === "Agent" || name === "Task") return renderTool(toolUse, toolResult, "subagent");
+  if (name === "Agent" || name === "Task") return renderToolAgent(toolUse, toolResult);
+  if (name === "Skill") return renderToolSkill(toolUse, toolResult);
   return renderTool(toolUse, toolResult, "tool");
 }
 
@@ -162,6 +166,8 @@ async function main() {
   $stats.textContent = `${body.events.length} 条事件`;
   const $filterRow = document.getElementById("filter-row");
   bindChips($conv, $filterRow);
+  const $subToggleRow = document.getElementById("sub-toggle-row");
+  bindSubToggles($conv, $subToggleRow);
   if (q) highlightAll($conv, q);
 }
 

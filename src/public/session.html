@@ -20,12 +20,19 @@
 <body>
   <header class="toolbar">
     <a href="/" id="back">← 会话列表</a>
-    <h1 id="title" style="margin:0;font-size:14px;font-weight:600;"></h1>
+    <h1 id="title" style="margin:0;font-size:14px;font-weight:600;flex:1;"></h1>
     <div class="stats" id="stats"></div>
   </header>
+  <div class="dot-legend">
+    <span class="legend-item"><span class="dot dot-user"></span> user</span>
+    <span class="legend-item"><span class="dot dot-assistant"></span> assistant</span>
+    <span class="legend-item"><span class="dot dot-tool"></span> tool</span>
+    <span class="legend-item"><span class="dot dot-subagent"></span> subagent</span>
+  </div>
   <div class="filter-row">
     <span class="filter-label">显示：</span>
     <span id="filter-row"></span>
+    <span id="sub-toggle-row" class="sub-toggle-row"></span>
   </div>
   <main>
     <div id="banner" style="display:none;"></div>
