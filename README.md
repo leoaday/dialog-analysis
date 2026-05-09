@@ -58,6 +58,8 @@ git push origin v0.2.0
 如果 tag 版本与 `package.json` 不一致，CI 会自动同步 `package.json` 并 push 回 master。
 此时本地 master 落后 1 commit，记得 `git pull` 后再继续开发。
 
+> 注意：版本同步发生在测试之前。如果同步后测试失败，master 上会留下一个版本变更 commit 但没有对应的 release。这种情况需要手动 revert 那个 commit，或者重新提交 + 重打 tag。
+
 如果 tag 不在 master 分支上，CI 会拒绝发布并报错。
 
 ## License
